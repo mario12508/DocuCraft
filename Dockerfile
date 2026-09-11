@@ -12,7 +12,8 @@ ENV PYTHONPATH=/usr/src/app/web
 CMD ["sh", "-c", "\
   python web/manage.py collectstatic --noinput && \
   python web/manage.py migrate --noinput && \
-  (ls web/fixtures/*.json >/dev/null 2>&1 && python web/manage.py loaddata web/fixtures/*.json || echo \"No fixtures found, skipping...\") && \
+  python web/manage.py seed_initial && \
+  (ls web/fixtures/*.json >/dev/null 2>&1 && python web/manage.py loaddata web/fixtures/*.json || echo 'No fixtures found, skipping...') && \
   echo \"import os; from django.contrib.auth import get_user_model; \
   U = get_user_model(); \
   username = os.getenv('DJANGO_SUPERUSER_USERNAME', 'admin'); \
@@ -21,7 +22,7 @@ CMD ["sh", "-c", "\
   U.objects.create_superuser(username, email, password) \
   if not U.objects.filter(username=username).exists() else None\" \
   | python web/manage.py shell && \
-  gunicorn web.wsgi:application \
+  exec gunicorn web.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers 2 \
     --threads 4 \
