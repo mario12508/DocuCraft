@@ -21,3 +21,4 @@ psycopg2-binary==2.9.11
 docx==0.2.4
 python-docx==1.2.0
 openai==3.13.0
+mammoth==1.12.1

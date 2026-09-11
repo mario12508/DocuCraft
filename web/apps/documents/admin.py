@@ -49,36 +49,6 @@ class DocumentTypeAdmin(ModelAdmin):
     )
 
 
-@admin.register(Template)
-class TemplateAdmin(ModelAdmin):
-    list_display = ("name", "code", "is_active")
-    list_editable = ("is_active",)
-    list_filter = ("is_active",)
-    search_fields = ("name", "code")
-    compressed_fields = True
-
-    fieldsets = (
-        (
-            "Основное",
-            {
-                "fields": ("code", "name", "description", "is_active"),
-                "classes": ("tab",),
-            },
-        ),
-        (
-            "Правила оформления",
-            {
-                "fields": ("rules",),
-                "classes": ("tab",),
-                "description": (
-                    "JSON-объект с параметрами: page, font, line_spacing, "
-                    "paragraph, header, footer."
-                ),
-            },
-        ),
-    )
-
-
 @admin.register(Document)
 class DocumentAdmin(ModelAdmin):
     list_display = (
@@ -159,4 +129,53 @@ class DocumentAdmin(ModelAdmin):
         return format_html(
             '<a href="{}" target="_blank">Скачать</a>',
             obj.docx_file.url,
+        )
+
+@admin.register(Template)
+class TemplateAdmin(ModelAdmin):
+    list_display = ("name", "code", "is_active", "has_docx")
+    list_editable = ("is_active",)
+    list_filter = ("is_active",)
+    search_fields = ("name", "code")
+    compressed_fields = True
+
+    fieldsets = (
+        (
+            "Основное",
+            {
+                "fields": ("code", "name", "description", "is_active"),
+                "classes": ("tab",),
+            },
+        ),
+        (
+            "Файл-шаблон DOCX",
+            {
+                "fields": ("docx_template",),
+                "classes": ("tab",),
+                "description": (
+                    "Загрузите .docx с плейсхолдерами [Кому], [Должность], "
+                    "[ФИО], [Дата], [Номер], [Заголовок], [Текст документа], "
+                    "[И.О. Фамилия]. Если файла нет — используется "
+                    "программная сборка."
+                ),
+            },
+        ),
+        (
+            "Правила оформления (fallback)",
+            {
+                "fields": ("rules",),
+                "classes": ("tab",),
+            },
+        ),
+    )
+
+    @display(description="Шаблон DOCX")
+    def has_docx(self, obj):
+        if not obj.docx_template:
+            return format_html(
+                '<span style="color:#9ca3af;">программная сборка</span>'
+            )
+        return format_html(
+            '<a href="{}" target="_blank">Скачать</a>',
+            obj.docx_template.url,
         )

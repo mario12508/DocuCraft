@@ -21,16 +21,16 @@
   </header>
 
   {% if form.errors %}
-    <div class="doc-alert doc-alert-danger">
-      <strong>Проверьте поля:</strong>
-      <ul>
-        {% for field, errors in form.errors.items %}
-          {% for error in errors %}
-            <li>{{ error }}</li>
-          {% endfor %}
-        {% endfor %}
-      </ul>
-    </div>
+  <div class="doc-alert doc-alert-danger">
+    <strong>Проверьте поля:</strong>
+    <ul>
+      {% for field, errors in form.errors.items %}
+      {% for error in errors %}
+      <li>{{ error }}</li>
+      {% endfor %}
+      {% endfor %}
+    </ul>
+  </div>
   {% endif %}
 
   <div class="doc-preview-draft">
@@ -46,10 +46,10 @@
       <legend>Тип документа</legend>
       <div class="doc-cards">
         {% for radio in form.document_type %}
-          <label class="doc-card">
-            {{ radio.tag }}
-            <span class="doc-card-body">
-              <strong>{{ radio.choice_label }}</strong>
+        <label class="doc-card">
+          {{ radio.tag }}
+          <span class="doc-card-body">
+              <strong>{{ radio.data.label }}</strong>
               {% with dt_pk=radio.data.value %}
                 {% for dt in document_types %}
                   {% if dt.pk|stringformat:"s" == dt_pk|stringformat:"s" %}
@@ -59,11 +59,11 @@
                 {% endfor %}
               {% endwith %}
             </span>
-          </label>
+        </label>
         {% endfor %}
       </div>
       {% if form.document_type.errors %}
-        <div class="doc-alert doc-alert-danger">{{ form.document_type.errors }}</div>
+      <div class="doc-alert doc-alert-danger">{{ form.document_type.errors }}</div>
       {% endif %}
     </fieldset>
 
@@ -71,23 +71,23 @@
       <legend>Шаблон оформления</legend>
       <div class="doc-cards">
         {% for radio in form.template %}
-          <label class="doc-card">
-            {{ radio.tag }}
-            <span class="doc-card-body">
-              <strong>{{ radio.choice_label }}</strong>
-              {% with tpl_pk=radio.data.value %}
-                {% for tpl in templates %}
-                  {% if tpl.pk|stringformat:"s" == tpl_pk|stringformat:"s" %}
-                    {% if tpl.description %}<em>{{ tpl.description }}</em>{% endif %}
-                  {% endif %}
-                {% endfor %}
-              {% endwith %}
-            </span>
-          </label>
+        {% with tpl_pk=radio.data.value %}
+        {% for tpl in templates %}
+        {% if tpl.pk|stringformat:"s" == tpl_pk|stringformat:"s" %}
+        <label class="doc-card">
+          {{ radio.tag }}
+          <span class="doc-card-body">
+            <strong>{{ tpl.name }}</strong>
+            {% if tpl.description %}<em>{{ tpl.description }}</em>{% endif %}
+          </span>
+        </label>
+        {% endif %}
+        {% endfor %}
+        {% endwith %}
         {% endfor %}
       </div>
       {% if form.template.errors %}
-        <div class="doc-alert doc-alert-danger">{{ form.template.errors }}</div>
+      <div class="doc-alert doc-alert-danger">{{ form.template.errors }}</div>
       {% endif %}
     </fieldset>
 
@@ -106,52 +106,52 @@
 </div>
 
 <script>
-(function () {
-  const form = document.getElementById('step2Form');
-  const overlay = document.getElementById('processingOverlay');
-  const steps = overlay ? overlay.querySelectorAll('.doc-processing-steps li') : [];
-  const note = overlay ? overlay.querySelector('.doc-processing-note') : null;
+  (function () {
+    const form = document.getElementById('step2Form');
+    const overlay = document.getElementById('processingOverlay');
+    const steps = overlay ? overlay.querySelectorAll('.doc-processing-steps li') : [];
+    const note = overlay ? overlay.querySelector('.doc-processing-note') : null;
 
-  if (!form || !overlay) return;
+    if (!form || !overlay) return;
 
-  let elapsedTimer = null;
+    let elapsedTimer = null;
 
-  form.addEventListener('submit', function (e) {
-    if (form.dataset.submitting === '1') return;
-    form.dataset.submitting = '1';
-    e.preventDefault();
+    form.addEventListener('submit', function (e) {
+      if (form.dataset.submitting === '1') return;
+      form.dataset.submitting = '1';
+      e.preventDefault();
 
-    overlay.hidden = false;
-    document.body.classList.add('doc-processing-active');
+      overlay.hidden = false;
+      document.body.classList.add('doc-processing-active');
 
-    // Поэтапная подсветка — 4 шага, но последний «висит» до ответа
-    let i = 0;
-    const advance = () => {
-      if (i > 0 && steps[i - 1]) steps[i - 1].classList.add('done');
-      if (i < steps.length - 1) {
-        steps[i].classList.add('active');
-        i++;
-        setTimeout(advance, 400);
-      } else if (steps[steps.length - 1]) {
-        steps[steps.length - 1].classList.add('active');
+      // Поэтапная подсветка — 4 шага, но последний «висит» до ответа
+      let i = 0;
+      const advance = () => {
+        if (i > 0 && steps[i - 1]) steps[i - 1].classList.add('done');
+        if (i < steps.length - 1) {
+          steps[i].classList.add('active');
+          i++;
+          setTimeout(advance, 400);
+        } else if (steps[steps.length - 1]) {
+          steps[steps.length - 1].classList.add('active');
+        }
+      };
+      advance();
+
+      // Секундомер
+      const start = Date.now();
+      if (note) {
+        elapsedTimer = setInterval(() => {
+          const s = Math.round((Date.now() - start) / 1000);
+          note.textContent = `Обрабатываем… ${s} с. Обычно это занимает 2–15 секунд.`;
+        }, 500);
       }
-    };
-    advance();
 
-    // Секундомер
-    const start = Date.now();
-    if (note) {
-      elapsedTimer = setInterval(() => {
-        const s = Math.round((Date.now() - start) / 1000);
-        note.textContent = `Обрабатываем… ${s} с. Обычно это занимает 2–15 секунд.`;
-      }, 500);
-    }
-
-    // Реальная отправка — через 1.6 сек (чтобы анимация успела)
-    setTimeout(() => {
-      HTMLFormElement.prototype.submit.call(form);
-    }, 1600);
-  });
-})();
+      // Реальная отправка — через 1.6 сек (чтобы анимация успела)
+      setTimeout(() => {
+        HTMLFormElement.prototype.submit.call(form);
+      }, 1600);
+    });
+  })();
 </script>
 {% endblock %}

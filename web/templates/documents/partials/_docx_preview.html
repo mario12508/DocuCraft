@@ -1,0 +1,16 @@
+{% load static %}
+<div class="docx-preview">
+  <div class="docx-preview-page">
+    {{ html|safe }}
+  </div>
+  {% if warnings %}
+    <details class="docx-preview-warnings">
+      <summary>Предупреждения конвертера ({{ warnings|length }})</summary>
+      <ul>
+        {% for w in warnings %}
+          <li>{{ w.message }}</li>
+        {% endfor %}
+      </ul>
+    </details>
+  {% endif %}
+</div>

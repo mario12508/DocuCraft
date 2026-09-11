@@ -342,3 +342,6 @@ AI_PROVIDERS = [
 
 AI_TOTAL_TIMEOUT = 45
 
+SOFFICE_PATH = None
+
+DOCX_TEMPLATES_DIR = BASE_DIR / "static_dev" / "templates"

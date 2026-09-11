@@ -30,23 +30,21 @@ class Template(models.Model):
     code = models.SlugField("Код", unique=True)
     name = models.CharField("Название", max_length=100)
     description = models.TextField("Описание", blank=True)
-    rules = models.JSONField(
-        "Правила оформления", default=dict,
+    rules = models.JSONField("Правила оформления", default=dict, help_text="...")
+
+    # НОВОЕ ПОЛЕ ↓
+    docx_template = models.FileField(
+        "Файл-шаблон DOCX",
+        upload_to="templates/",
+        blank=True,
         help_text=(
-            'Например: {"page": {"margins": {"top": 2, "bottom": 2, '
-            '"left": 3, "right": 1.5}}, "font": {"name": "Times New Roman", '
-            '"size": 14}, "line_spacing": 1.5}'
+            "Файл .docx с плейсхолдерами [Кому], [Должность], [ФИО], "
+            "[Дата], [Номер], [Заголовок], [Текст документа]. "
+            "Если не задан — используется программная сборка."
         ),
     )
+
     is_active = models.BooleanField("Активен", default=True)
-
-    class Meta:
-        verbose_name = "Шаблон"
-        verbose_name_plural = "Шаблоны"
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name
 
 
 class RequiredField(models.Model):

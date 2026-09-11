@@ -261,10 +261,20 @@ class DownloadView(LoginRequiredMixin, View):
         return self._serve(document, request.POST.get("format", "docx"))
 
     def _serve(self, document, fmt):
+        from django.http import HttpResponse
+
         fmt = (fmt or "docx").lower()
 
         if fmt == "pdf":
-            buffer = generate_pdf(document)
+            try:
+                buffer = generate_pdf(document)
+            except Exception as exc:
+                logger.exception("PDF generation failed")
+                return HttpResponse(
+                    f"Не удалось сформировать PDF: {exc}",
+                    status=500,
+                    content_type="text/plain; charset=utf-8",
+                )
             filename = f"document_{document.pk}.pdf"
             content_type = "application/pdf"
         else:
@@ -276,8 +286,26 @@ class DownloadView(LoginRequiredMixin, View):
             )
 
         return FileResponse(
-            buffer,
-            as_attachment=True,
-            filename=filename,
-            content_type=content_type,
+            buffer, as_attachment=True,
+            filename=filename, content_type=content_type,
+        )
+
+class DocxPreviewView(LoginRequiredMixin, View):
+    """Рендерит DOCX в HTML для предпросмотра в браузере."""
+
+    def get(self, request, pk):
+        import mammoth
+
+        document = get_object_or_404(Document, pk=pk)
+        docx_buffer = generate_docx(document)
+
+        result = mammoth.convert_to_html(docx_buffer)
+        return render(
+            request,
+            "documents/partials/_docx_preview.html",
+            {
+                "document": document,
+                "html": result.value,
+                "warnings": result.messages,
+            },
         )

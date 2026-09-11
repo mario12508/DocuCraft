@@ -5,7 +5,6 @@ from io import BytesIO
 from pathlib import Path
 
 from django.conf import settings
-from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
@@ -14,27 +13,22 @@ from reportlab.pdfgen import canvas
 
 logger = logging.getLogger(__name__)
 
-# Метрически совместимые замены для популярных шрифтов.
-# Times New Roman / Calibri — коммерческие, TTF в комплект не входят.
-# Liberation Serif ≈ Times New Roman, Liberation Sans ≈ Arial,
-# Carlito ≈ Calibri. Скачайте ttf-файлы и положите в static_dev/fonts/.
 FONT_ALIASES = {
     "times new roman": "LiberationSerif",
     "arial": "LiberationSans",
     "calibri": "Carlito",
     "dejavu sans": "DejaVuSans",
 }
-
 FALLBACK_FONT = "Helvetica"
 
 _FONTS_READY = False
-_REGISTERED = {}  # alias → реальное имя зарегистрированного шрифта
+_REGISTERED = {}
 
 
 def _fonts_dir():
     for cand in (
-            Path(settings.BASE_DIR) / "static_dev" / "fonts",
-            Path(settings.BASE_DIR) / "static" / "fonts",
+        Path(settings.BASE_DIR) / "static_dev" / "fonts",
+        Path(settings.BASE_DIR) / "static" / "fonts",
     ):
         if cand.exists():
             return cand
@@ -50,10 +44,10 @@ def _register_fonts():
     d = _fonts_dir()
     candidates = {
         "DejaVuSans": ("DejaVuSans.ttf", "DejaVuSans-Bold.ttf"),
-        "LiberationSerif": (
-        "LiberationSerif-Regular.ttf", "LiberationSerif-Bold.ttf"),
-        "LiberationSans": (
-        "LiberationSans-Regular.ttf", "LiberationSans-Bold.ttf"),
+        "LiberationSerif": ("LiberationSerif-Regular.ttf",
+                            "LiberationSerif-Bold.ttf"),
+        "LiberationSans": ("LiberationSans-Regular.ttf",
+                           "LiberationSans-Bold.ttf"),
         "Carlito": ("Carlito-Regular.ttf", "Carlito-Bold.ttf"),
     }
     for name, (reg, bold) in candidates.items():
@@ -74,14 +68,12 @@ def _register_fonts():
 
 
 def _resolve_font(font_name):
-    """Возвращает (regular, bold) из зарегистрированных или fallback."""
     if not _REGISTERED:
         return FALLBACK_FONT, FALLBACK_FONT
     key = (font_name or "").strip().lower()
     alias = FONT_ALIASES.get(key)
     if alias and alias in _REGISTERED:
         return alias, f"{alias}-Bold"
-    # Первый зарегистрированный — как разумный дефолт
     first = next(iter(_REGISTERED))
     return first, f"{first}-Bold"
 
@@ -111,7 +103,6 @@ def generate_pdf(document):
     font_size = font_cfg.get("size", 14)
     spacing = rules.get("line_spacing", 1.5)
     para = rules.get("paragraph", {})
-    align = para.get("alignment", "justify")
     indent = para.get("first_line_indent", 1.25)
     layout = rules.get("layout", "classic")
 
@@ -138,29 +129,24 @@ def generate_pdf(document):
         c.showPage()
         y = height - top
 
-    def draw(text="", bold=False, x=None, center=False, right_align=False):
+    def draw(text="", bold=False, center=False, right_align=False,
+             extra_indent=0):
         nonlocal y
         if y < bottom + line_height:
             new_page()
         f = bold_font if bold else regular_font
         c.setFont(f, font_size)
-        text_width = c.stringWidth(text, f, font_size)
-
+        tw = c.stringWidth(text, f, font_size)
         if center:
-            x_pos = (width - text_width) / 2
+            x_pos = (width - tw) / 2
         elif right_align:
-            x_pos = width - right - text_width
-        elif x is not None:
-            x_pos = x
+            x_pos = width - right - tw
         else:
-            x_pos = x_left
-
+            x_pos = x_left + extra_indent
         c.drawString(x_pos, y, text)
         y -= line_height
 
     extracted = document.extracted_fields or {}
-    fields = {rf.code: rf for rf in
-              document.document_type.required_fields.all()}
 
     # === Шапка ===
     if layout == "modern":
@@ -170,35 +156,28 @@ def generate_pdf(document):
 
         addressee = extracted.get("addressee") or "—"
         sender = extracted.get("sender") or "—"
-        draw(f"Кому: {addressee}", bold=True)
+        draw("Кому:", bold=True)
+        draw(addressee)
+        draw("От кого:", bold=True)
         draw(sender)
         y -= line_height * 0.3
-
-        date = extracted.get("date", "")
-        number = extracted.get("number", "")
-        if date or number:
-            parts = []
-            if date:
-                parts.append(f"Дата: {date}")
-            if number:
-                parts.append(f"Номер: {number}")
-            draw("   ".join(parts))
-    else:  # classic
+    else:
         addressee = extracted.get("addressee")
         if addressee:
             for line in addressee.split("\n"):
                 draw(line.strip(), right_align=True)
 
-        date = extracted.get("date", "")
-        number = extracted.get("number", "")
-        if date or number:
-            parts = []
-            if date:
-                parts.append(f"Дата: {date}")
-            if number:
-                parts.append(f"Номер: {number}")
-            draw("   ".join(parts))
+    date = extracted.get("date", "")
+    number = extracted.get("number", "")
+    if date or number:
+        parts = []
+        if date:
+            parts.append(f"Дата: {date}")
+        if number:
+            parts.append(f"Номер: {number}")
+        draw("   ".join(parts))
 
+    if layout == "classic":
         subject = extracted.get("subject")
         if subject:
             draw(subject, bold=True, center=True)
@@ -206,7 +185,6 @@ def generate_pdf(document):
     y -= line_height * 0.3
 
     # === Основной текст ===
-    first_paragraph = True
     for block in (document.processed_text or "").split("\n\n"):
         block = block.strip()
         if not block:
@@ -214,11 +192,10 @@ def generate_pdf(document):
         lines = _wrap(block, max_chars)
         for i, line in enumerate(lines):
             if layout == "classic":
-                draw(line, x=x_left + (indent_pt if i == 0 else 0))
+                draw(line, extra_indent=(indent_pt if i == 0 else 0))
             else:
                 draw(line)
         y -= line_height * 0.3
-        first_paragraph = False
 
     # === Подпись ===
     signature = extracted.get("signature") or extracted.get("sender")
