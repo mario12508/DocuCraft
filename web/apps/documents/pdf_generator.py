@@ -113,6 +113,7 @@ def generate_pdf(document):
     para = rules.get("paragraph", {})
     align = para.get("alignment", "justify")
     indent = para.get("first_line_indent", 1.25)
+    layout = rules.get("layout", "classic")
 
     margins = rules.get("page", {}).get("margins", {})
     top = margins.get("top", 2) * cm
@@ -121,14 +122,6 @@ def generate_pdf(document):
     right = margins.get("right", 1.5) * cm
 
     regular_font, bold_font = _resolve_font(font_name)
-
-    ALIGN_MAP = {
-        "left": "left",
-        "center": "center",
-        "right": "right",
-        "justify": "left",
-    }
-    align_mode = ALIGN_MAP.get(align, "left")
 
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -145,38 +138,97 @@ def generate_pdf(document):
         c.showPage()
         y = height - top
 
-    def draw(text="", bold=False, is_first_line=False, center=False):
+    def draw(text="", bold=False, x=None, center=False, right_align=False):
         nonlocal y
         if y < bottom + line_height:
             new_page()
         f = bold_font if bold else regular_font
         c.setFont(f, font_size)
-        x = x_left
+        text_width = c.stringWidth(text, f, font_size)
+
         if center:
-            x = (width - c.stringWidth(text, f, font_size)) / 2
-        elif is_first_line and indent_pt:
-            x = x_left + indent_pt
-        c.drawString(x, y, text)
+            x_pos = (width - text_width) / 2
+        elif right_align:
+            x_pos = width - right - text_width
+        elif x is not None:
+            x_pos = x
+        else:
+            x_pos = x_left
+
+        c.drawString(x_pos, y, text)
         y -= line_height
 
     extracted = document.extracted_fields or {}
-    for rf in document.document_type.required_fields.all():
-        value = extracted.get(rf.code) or rf.placeholder
-        draw(f"{rf.label}: {value}")
+    fields = {rf.code: rf for rf in
+              document.document_type.required_fields.all()}
 
-    y -= line_height * 0.5
+    # === Шапка ===
+    if layout == "modern":
+        subject = extracted.get("subject")
+        if subject:
+            draw(subject, bold=True)
 
+        addressee = extracted.get("addressee") or "—"
+        sender = extracted.get("sender") or "—"
+        draw(f"Кому: {addressee}", bold=True)
+        draw(sender)
+        y -= line_height * 0.3
+
+        date = extracted.get("date", "")
+        number = extracted.get("number", "")
+        if date or number:
+            parts = []
+            if date:
+                parts.append(f"Дата: {date}")
+            if number:
+                parts.append(f"Номер: {number}")
+            draw("   ".join(parts))
+    else:  # classic
+        addressee = extracted.get("addressee")
+        if addressee:
+            for line in addressee.split("\n"):
+                draw(line.strip(), right_align=True)
+
+        date = extracted.get("date", "")
+        number = extracted.get("number", "")
+        if date or number:
+            parts = []
+            if date:
+                parts.append(f"Дата: {date}")
+            if number:
+                parts.append(f"Номер: {number}")
+            draw("   ".join(parts))
+
+        subject = extracted.get("subject")
+        if subject:
+            draw(subject, bold=True, center=True)
+
+    y -= line_height * 0.3
+
+    # === Основной текст ===
+    first_paragraph = True
     for block in (document.processed_text or "").split("\n\n"):
         block = block.strip()
         if not block:
             continue
         lines = _wrap(block, max_chars)
         for i, line in enumerate(lines):
-            if align_mode == "center":
-                draw(line, center=True)
+            if layout == "classic":
+                draw(line, x=x_left + (indent_pt if i == 0 else 0))
             else:
-                draw(line, is_first_line=(i == 0))
-        y -= line_height * 0.5
+                draw(line)
+        y -= line_height * 0.3
+        first_paragraph = False
+
+    # === Подпись ===
+    signature = extracted.get("signature") or extracted.get("sender")
+    if signature:
+        y -= line_height * 0.3
+        for line in signature.split("\n"):
+            if layout == "modern":
+                draw(line.strip(), center=True)
+            else:
+                draw(line.strip())
 
     c.showPage()
     c.save()

@@ -22,7 +22,6 @@ SESSION_TEMPLATE = "draft_template_id"
 
 
 def _apply_ai_result(document, result, doc_type):
-    """Общий код: применяет ответ ИИ к документу. Используется в Step2 и retry."""
     document.processed_text = result.processed_text
     document.ai_provider = result.provider
     document.ai_model = result.model
@@ -42,6 +41,16 @@ def _apply_ai_result(document, result, doc_type):
     if "date" in [rf.code for rf in doc_type.required_fields.all()]:
         if not mapped.get("date"):
             mapped["date"] = timezone.now().strftime("%d.%m.%Y")
+            document.document_date = timezone.now().date()
+        else:
+            # Попробуем распарсить дату из ИИ-ответа
+            try:
+                from datetime import datetime
+                document.document_date = datetime.strptime(
+                    mapped["date"], "%d.%m.%Y"
+                ).date()
+            except (ValueError, TypeError):
+                document.document_date = timezone.now().date()
 
     document.extracted_fields = mapped
     document.missing_fields = [
