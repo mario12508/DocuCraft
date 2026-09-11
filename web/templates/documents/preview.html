@@ -1,0 +1,109 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Шаг 3. Результат — Панель{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/documents/wizard.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="doc-wizard">
+
+  {% include "documents/partials/_stepper.html" with current_step=3 %}
+
+  <header class="doc-wizard-header">
+    <h1>Документ почти готов</h1>
+    <p class="doc-wizard-subtitle">
+      Тип: <strong>{{ document.document_type.name }}</strong> ·
+      Шаблон: <strong>{{ document.template.name }}</strong>
+    </p>
+  </header>
+
+  {% if document.status == "error" %}
+  <div class="doc-alert doc-alert-danger">
+    <strong>Ошибка обработки.</strong>
+    {{ document.error_message|default:"ИИ-компонент недоступен." }}
+    <div class="doc-alert-actions">
+      <a href="{% url 'documents:step1' %}" class="doc-btn">Вернуться к черновику</a>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if messages %}
+  {% for msg in messages %}
+  <div class="doc-alert doc-alert-info">{{ msg }}</div>
+  {% endfor %}
+  {% endif %}
+
+  <form method="post" id="previewForm">
+    {% csrf_token %}
+
+    <section class="doc-block">
+      <h2>Реквизиты</h2>
+      <p class="doc-block-note">
+        Незаполненные поля будут помечены в документе как
+        <code>[Заполнить]</code>. Оставьте пустыми, если данных нет.
+      </p>
+
+      <div class="doc-req-list">
+        {% for field in required_fields %}
+        <label class="doc-req {% if field.is_missing %}doc-req-missing{% endif %}">
+          <span class="doc-req-label">{{ field.label }}</span>
+          <input type="text"
+                 name="field_{{ field.code }}"
+                 value="{{ field.value }}"
+                 placeholder="{{ field.placeholder }}">
+        </label>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="doc-block">
+      <h2>Обработанный текст</h2>
+      <p class="doc-block-note">
+        При необходимости можно отредактировать текст перед генерацией.
+      </p>
+      <textarea name="processed_text" rows="14" class="doc-textarea">{{ document.processed_text }}</textarea>
+    </section>
+
+    <div class="doc-status-bar">
+  <span class="doc-status-badge doc-status-{{ document.status }}">
+    {{ document.get_status_display }}
+  </span>
+
+  {% if document.status != "ready" %}
+    <button type="submit" name="action" value="mark_ready" class="doc-btn">
+      <i class="bi bi-check2-circle"></i> Отметить готовым
+    </button>
+  {% endif %}
+
+  {% if document.status != "draft" %}
+    <button type="submit" name="action" value="mark_draft" class="doc-btn">
+      <i class="bi bi-pencil"></i> Вернуть в черновик
+    </button>
+  {% endif %}
+</div>
+
+    <div class="doc-actions">
+      <a href="{% url 'documents:step2' %}" class="doc-btn">
+        <i class="bi bi-arrow-left"></i> Назад
+      </a>
+
+      <button type="submit" name="action" value="save" class="doc-btn">
+        <i class="bi bi-save"></i> Сохранить
+      </button>
+
+      <button type="submit" name="action" value="download" class="doc-btn doc-btn-primary">
+        <i class="bi bi-file-earmark-word"></i> Скачать DOCX
+      </button>
+
+      <button type="submit" name="format" value="pdf" class="doc-btn doc-btn-primary">
+        <i class="bi bi-file-earmark-pdf"></i> Скачать PDF
+      </button>
+    </div>
+  </form>
+
+</div>
+{% endblock %}

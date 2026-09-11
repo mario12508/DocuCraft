@@ -1,0 +1,64 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Главная — Панель{% endblock %}
+
+{% block dashboard_content %}
+<div class="dashboard-home">
+
+  <div class="dashboard-header">
+    <h1>{{ page_title }}</h1>
+    <p class="dashboard-subtitle">{{ page_subtitle }}</p>
+  </div>
+
+  <div class="dashboard-actions">
+    <a href="{% url 'documents:step1' %}" class="dashboard-btn dashboard-btn-primary">
+      <i class="bi bi-magic"></i>
+      Создать документ
+    </a>
+    <a href="{% url 'dashboard:documents' %}" class="dashboard-btn">
+      <i class="bi bi-list-ul"></i>
+      Все документы
+    </a>
+  </div>
+
+  <div class="dashboard-steps">
+    <div class="dashboard-step">
+      <span class="dashboard-step-number">1</span>
+      <h3>Ввод текста</h3>
+      <p>Вставьте черновик или напишите его прямо в браузере.</p>
+    </div>
+    <div class="dashboard-step">
+      <span class="dashboard-step-number">2</span>
+      <h3>Тип и шаблон</h3>
+      <p>Выберите тип документа и шаблон оформления организации.</p>
+    </div>
+    <div class="dashboard-step">
+      <span class="dashboard-step-number">3</span>
+      <h3>Готовый DOCX</h3>
+      <p>Получите редактируемый файл, соответствующий стандартам.</p>
+    </div>
+  </div>
+
+  <div class="dashboard-summary">
+    <h2>Доступные типы документов</h2>
+    <ul class="dashboard-chips">
+      {% for dt in document_types %}
+        <li class="dashboard-chip">{{ dt.name }}</li>
+      {% empty %}
+        <li class="dashboard-muted">Типы документов ещё не заведены.</li>
+      {% endfor %}
+    </ul>
+
+    <h2>Шаблоны оформления</h2>
+    <ul class="dashboard-chips">
+      {% for tpl in templates %}
+        <li class="dashboard-chip">{{ tpl.name }}</li>
+      {% empty %}
+        <li class="dashboard-muted">Шаблоны ещё не заведены.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,177 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Документы — Панель{% endblock %}
+
+{% block dashboard_content %}
+<div class="dashboard-home">
+
+  <div class="dashboard-header">
+    <h1>{{ page_title }}</h1>
+    <p class="dashboard-subtitle">{{ page_subtitle }}</p>
+  </div>
+
+  <div class="dashboard-actions">
+    <a href="{% url 'documents:step1' %}" class="dashboard-btn dashboard-btn-primary">
+      <i class="bi bi-plus-lg"></i>
+      Создать документ
+    </a>
+
+    <div class="dashboard-view-toggle" role="group" aria-label="Режим отображения">
+      <button type="button" class="view-toggle-btn is-active"
+              data-view="table" title="Таблица" aria-label="Таблица">
+        <i class="bi bi-list-ul"></i>
+      </button>
+      <button type="button" class="view-toggle-btn"
+              data-view="cards" title="Карточки" aria-label="Карточки">
+        <i class="bi bi-grid-3x3-gap"></i>
+      </button>
+    </div>
+  </div>
+
+  <form method="get" class="dashboard-filters">
+    <label>
+      Статус:
+      <select name="status">
+        <option value="">Все</option>
+        {% for code, label in status_choices %}
+          <option value="{{ code }}" {% if current_status == code %}selected{% endif %}>
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>
+      Тип:
+      <select name="type">
+        <option value="">Все</option>
+        {% for dt in document_types %}
+          <option value="{{ dt.code }}" {% if current_type == dt.code %}selected{% endif %}>
+            {{ dt.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <button type="submit" class="dashboard-btn">Фильтровать</button>
+    <a href="{% url 'dashboard:documents' %}" class="dashboard-btn">Сбросить</a>
+  </form>
+
+  {% if documents %}
+
+    <div class="docs-view" data-view="table" id="docsView">
+
+      <!-- Табличный вид -->
+      <div class="docs-table-wrap">
+        <table class="dashboard-table dashboard-table--clickable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Тип</th>
+              <th>Шаблон</th>
+              <th>Статус</th>
+              <th>Создан</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for doc in documents %}
+              <tr data-href="{% url 'dashboard:document_detail' doc.pk %}">
+                <td>#{{ doc.pk }}</td>
+                <td>{{ doc.document_type.name }}</td>
+                <td>{{ doc.template.name }}</td>
+                <td>
+                  <span class="status status-{{ doc.status }}">
+                    {{ doc.get_status_display }}
+                  </span>
+                </td>
+                <td>{{ doc.created_at|date:"d.m.Y H:i" }}</td>
+                <td class="dashboard-table-actions">
+                  <a href="{% url 'dashboard:document_delete' doc.pk %}"
+                     class="danger"
+                     data-no-row-click>Удалить</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Карточный вид -->
+      <div class="docs-cards">
+        {% for doc in documents %}
+          <a href="{% url 'dashboard:document_detail' doc.pk %}" class="doc-card-item">
+            <div class="doc-card-head">
+              <span class="doc-card-id">#{{ doc.pk }}</span>
+              <span class="status status-{{ doc.status }}">
+                {{ doc.get_status_display }}
+              </span>
+            </div>
+            <div class="doc-card-title">{{ doc.document_type.name }}</div>
+            <div class="doc-card-sub">{{ doc.template.name }}</div>
+            <div class="doc-card-date">
+              <i class="bi bi-clock"></i> {{ doc.created_at|date:"d.m.Y H:i" }}
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+
+    </div>
+
+    {% if is_paginated %}
+      <div class="dashboard-pagination">
+        {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}">← Назад</a>
+        {% endif %}
+        <span>Стр. {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}">Вперёд →</a>
+        {% endif %}
+      </div>
+    {% endif %}
+
+  {% else %}
+    <p class="dashboard-muted">Пока нет ни одного документа. Начните с кнопки «Создать документ».</p>
+  {% endif %}
+
+</div>
+
+<script>
+(function () {
+  const STORAGE_KEY = 'docsViewMode';
+  const viewRoot = document.getElementById('docsView');
+  const toggleBtns = document.querySelectorAll('.view-toggle-btn');
+
+  if (!viewRoot || !toggleBtns.length) return;
+
+  function setView(mode) {
+    viewRoot.dataset.view = mode;
+    toggleBtns.forEach(function (btn) {
+      btn.classList.toggle('is-active', btn.dataset.view === mode);
+    });
+    try { localStorage.setItem(STORAGE_KEY, mode); } catch (e) {}
+  }
+
+  // Восстанавливаем выбор
+  let saved = 'table';
+  try { saved = localStorage.getItem(STORAGE_KEY) || 'table'; } catch (e) {}
+  setView(saved);
+
+  toggleBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      setView(btn.dataset.view);
+    });
+  });
+
+  // Клик по строке в табличном режиме
+  document.querySelectorAll('tr[data-href]').forEach(function (row) {
+    row.addEventListener('click', function (e) {
+      if (e.target.closest('a, button, [data-no-row-click]')) return;
+      if (window.getSelection && String(window.getSelection()).length > 0) return;
+      window.location.href = row.dataset.href;
+    });
+  });
+})();
+</script>
+{% endblock %}

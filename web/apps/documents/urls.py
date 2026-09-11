@@ -1,0 +1,14 @@
+__all__ = ()
+
+from django.urls import path
+
+from apps.documents import views
+
+app_name = "documents"
+
+urlpatterns = [
+    path("step1/", views.Step1View.as_view(), name="step1"),
+    path("step2/", views.Step2View.as_view(), name="step2"),
+    path("<int:pk>/preview/", views.PreviewView.as_view(), name="preview"),
+    path("<int:pk>/download/", views.DownloadView.as_view(), name="download"),
+]

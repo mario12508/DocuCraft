@@ -1,0 +1,17 @@
+{% load static %}
+<div class="doc-stepper" aria-label="Шаги создания документа">
+  <div class="doc-step {% if current_step == 1 %}active{% endif %} {% if current_step > 1 %}done{% endif %}">
+    <span class="doc-step-num">1</span>
+    <span class="doc-step-label">Черновик</span>
+  </div>
+  <div class="doc-step-line {% if current_step > 1 %}done{% endif %}"></div>
+  <div class="doc-step {% if current_step == 2 %}active{% endif %} {% if current_step > 2 %}done{% endif %}">
+    <span class="doc-step-num">2</span>
+    <span class="doc-step-label">Тип и шаблон</span>
+  </div>
+  <div class="doc-step-line {% if current_step > 2 %}done{% endif %}"></div>
+  <div class="doc-step {% if current_step == 3 %}active{% endif %}">
+    <span class="doc-step-num">3</span>
+    <span class="doc-step-label">Результат</span>
+  </div>
+</div>

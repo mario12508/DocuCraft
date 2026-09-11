@@ -1,0 +1,148 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Шаг 1. Черновик — Панель{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/documents/wizard.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="doc-wizard">
+
+  {% include "documents/partials/_stepper.html" with current_step=1 %}
+
+  <header class="doc-wizard-header">
+    <h1>Черновик документа</h1>
+    <p class="doc-wizard-subtitle">
+      Вставьте текст как есть — система потом приведёт его к деловому стилю.
+    </p>
+  </header>
+
+  {% if form.errors %}
+    <div class="doc-alert doc-alert-danger">
+      <strong>Проверьте поле:</strong>
+      <ul>
+        {% for field, errors in form.errors.items %}
+          {% for error in errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if error %}
+    <div class="doc-alert doc-alert-danger">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" class="doc-form" id="step1Form">
+    {% csrf_token %}
+
+    <div class="doc-field">
+      <label for="{{ form.source_text.id_for_label }}">{{ form.source_text.label }}</label>
+      {{ form.source_text }}
+      <div class="doc-field-help">
+        <span id="charCount">0</span> символов
+      </div>
+    </div>
+
+    <div class="doc-actions">
+      <a href="{% url 'dashboard:home' %}" class="doc-btn">
+        <i class="bi bi-arrow-left"></i> Назад
+      </a>
+      <button type="submit" class="doc-btn doc-btn-primary">
+        Далее: тип и шаблон <i class="bi bi-arrow-right"></i>
+      </button>
+    </div>
+  </form>
+
+  <details class="doc-demo" open>
+  <summary>Демонстрационные черновики</summary>
+  <p>
+    Выберите один из готовых черновиков — он подставится в поле выше.
+    Тексты специально содержат опечатки, разговорные обороты
+    и незаполненные реквизиты, чтобы проверить сценарии 2, 3, 4.
+  </p>
+
+  <div class="doc-demo-list">
+    <button type="button" class="doc-demo-card" data-demo="sluzhebnaya">
+      <strong>Служебная записка</strong>
+      <em>Просьба о выделении отпуска</em>
+    </button>
+
+    <button type="button" class="doc-demo-card" data-demo="dokladnaya">
+      <strong>Докладная записка</strong>
+      <em>О срыве сроков поставки</em>
+    </button>
+
+    <button type="button" class="doc-demo-card" data-demo="spravka">
+      <strong>Информационная справка</strong>
+      <em>Итоги работы отдела за квартал</em>
+    </button>
+
+    <button type="button" class="doc-demo-card" data-demo="pismo">
+      <strong>Письмо</strong>
+      <em>Приглашение на конференцию</em>
+    </button>
+  </div>
+</details>
+
+</div>
+
+<script>
+(function () {
+  const textarea = document.getElementById('{{ form.source_text.id_for_label }}');
+  const counter = document.getElementById('charCount');
+
+  const DEMO_TEXTS = {
+    sluzhebnaya:
+`Прошу предоставить мне ежегодный оплачиваемый отпуск с 10.05.2026 года сроком на 14 календарных дней. Причина — семейные обстоятельства, ну и вообще давно не отдыхал. За время отсутствия мои обязанности может исполнять Петров П.П., он в курсе.
+
+С уважением, Иванов И.И.`,
+
+    dokladnaya:
+`Докладываю, что поставка комплектующих от ООО «Ромашка» по договору №45-2026 от 12.02.2026 сорвана. Планировали получить ещё 3 марта, но машина так и не пришла. Поставщик кормит завтраками уже вторую неделю, ссылается на проблемы на складе. Из-за этого мы рискуем не сдать проект заказчику в срок до 30.04.2026 и потерять 1 200 000 рублей неустойки.
+
+Прошу принять меры и подключить юридический отдел.`,
+
+    spravka:
+`По итогам работы отдела продаж за 1 квартал 2026 года докладываю следующее. План выполнен на 112%, выручка составила 48 700 000 рублей, что на 9% выше аналогичного периода прошлого года. Ключевыми клиентами квартала стали АО «Вектор», ООО «Северная звезда» и ИП Смирнов А.В.
+
+Основные проблемы: высокая текучесть среди новых менеджеров (трое уволились за квартал), задержки с отгрузками из-за перебоев у логистического партнёра. Предлагаю рассмотреть расширение штата и смену логистического оператора.`,
+
+    pismo:
+`Уважаемый Александр Петрович!
+
+Приглашаем Вас и Ваших коллег принять участие в ежегодной конференции «Цифровая трансформация промышленности — 2026», которая пройдёт 15–17 июня 2026 года в Москве, в конгресс-центре «Технополис».
+
+В программе — пленарные сессии, мастер-классы и круглые столы по темам: промышленный ИИ, цифровые двойники, кибербезопасность. Участие бесплатное, но количество мест ограничено. Регистрация — до 1 июня 2026 года.
+
+Просим подтвердить участие письмом на адрес conf@techpolis.ru.`
+  };
+
+  function updateCount() {
+    if (textarea && counter) counter.textContent = textarea.value.length;
+  }
+
+  if (textarea) {
+    textarea.addEventListener('input', updateCount);
+    updateCount();
+  }
+
+  document.querySelectorAll('.doc-demo-card').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (!textarea) return;
+      const key = btn.dataset.demo;
+      const text = DEMO_TEXTS[key];
+      if (!text) return;
+      textarea.value = text;
+      updateCount();
+      textarea.focus();
+      textarea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+})();
+</script>
+{% endblock %}

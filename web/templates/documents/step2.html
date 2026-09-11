@@ -1,0 +1,141 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Шаг 2. Тип и шаблон — Панель{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/documents/wizard.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="doc-wizard">
+
+  {% include "documents/partials/_stepper.html" with current_step=2 %}
+
+  <header class="doc-wizard-header">
+    <h1>Тип документа и шаблон</h1>
+    <p class="doc-wizard-subtitle">
+      Тип влияет на структуру и набор реквизитов, шаблон — только на оформление.
+    </p>
+  </header>
+
+  {% if form.errors %}
+    <div class="doc-alert doc-alert-danger">
+      <strong>Проверьте поля:</strong>
+      <ul>
+        {% for field, errors in form.errors.items %}
+          {% for error in errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <div class="doc-preview-draft">
+    <h2>Черновик</h2>
+    <pre class="doc-pre">{{ source_text|truncatechars:600 }}</pre>
+    <a href="{% url 'documents:step1' %}" class="doc-link">Изменить черновик</a>
+  </div>
+
+  <form method="post" class="doc-form" id="step2Form">
+    {% csrf_token %}
+
+    <fieldset class="doc-fieldset">
+      <legend>Тип документа</legend>
+      <div class="doc-cards">
+        {% for radio in form.document_type %}
+          <label class="doc-card">
+            {{ radio.tag }}
+            <span class="doc-card-body">
+              <strong>{{ radio.choice_label }}</strong>
+              {% with dt_pk=radio.data.value %}
+                {% for dt in document_types %}
+                  {% if dt.pk|stringformat:"s" == dt_pk|stringformat:"s" %}
+                    {% if dt.structure_hint %}<em>{{ dt.structure_hint }}</em>{% endif %}
+                    <span class="doc-card-meta">Реквизитов: {{ dt.required_fields.count }}</span>
+                  {% endif %}
+                {% endfor %}
+              {% endwith %}
+            </span>
+          </label>
+        {% endfor %}
+      </div>
+      {% if form.document_type.errors %}
+        <div class="doc-alert doc-alert-danger">{{ form.document_type.errors }}</div>
+      {% endif %}
+    </fieldset>
+
+    <fieldset class="doc-fieldset">
+      <legend>Шаблон оформления</legend>
+      <div class="doc-cards">
+        {% for radio in form.template %}
+          <label class="doc-card">
+            {{ radio.tag }}
+            <span class="doc-card-body">
+              <strong>{{ radio.choice_label }}</strong>
+              {% with tpl_pk=radio.data.value %}
+                {% for tpl in templates %}
+                  {% if tpl.pk|stringformat:"s" == tpl_pk|stringformat:"s" %}
+                    {% if tpl.description %}<em>{{ tpl.description }}</em>{% endif %}
+                  {% endif %}
+                {% endfor %}
+              {% endwith %}
+            </span>
+          </label>
+        {% endfor %}
+      </div>
+      {% if form.template.errors %}
+        <div class="doc-alert doc-alert-danger">{{ form.template.errors }}</div>
+      {% endif %}
+    </fieldset>
+
+    <div class="doc-actions">
+      <a href="{% url 'documents:step1' %}" class="doc-btn">
+        <i class="bi bi-arrow-left"></i> Назад
+      </a>
+      <button type="submit" class="doc-btn doc-btn-primary">
+        Обработать и сформировать <i class="bi bi-magic"></i>
+      </button>
+    </div>
+  </form>
+
+  {% include "documents/partials/_processing.html" %}
+
+</div>
+
+<script>
+(function () {
+  const form = document.getElementById('step2Form');
+  const overlay = document.getElementById('processingOverlay');
+  const steps = overlay ? overlay.querySelectorAll('.doc-processing-steps li') : [];
+
+  if (!form || !overlay) return;
+
+  form.addEventListener('submit', function (e) {
+    if (form.dataset.submitting === '1') return;
+    form.dataset.submitting = '1';
+    e.preventDefault();
+
+    overlay.hidden = false;
+    document.body.classList.add('doc-processing-active');
+
+    let i = 0;
+    function advance() {
+      if (i > 0 && steps[i - 1]) steps[i - 1].classList.add('done');
+      if (i < steps.length) {
+        steps[i].classList.add('active');
+        i++;
+        setTimeout(advance, 350);
+      } else {
+        setTimeout(function () {
+          HTMLFormElement.prototype.submit.call(form);
+        }, 250);
+      }
+    }
+    advance();
+  });
+})();
+</script>
+{% endblock %}

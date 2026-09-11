@@ -1,0 +1,88 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Документ #{{ document.pk }} — Панель{% endblock %}
+
+{% block dashboard_content %}
+<div class="dashboard-home">
+
+  <div class="dashboard-header">
+    <h1>{{ page_title }}</h1>
+    <p class="dashboard-subtitle">{{ page_subtitle }}</p>
+  </div>
+
+  <div class="dashboard-actions">
+    <a href="{% url 'dashboard:documents' %}" class="dashboard-btn">
+      <i class="bi bi-arrow-left"></i> К списку
+    </a>
+
+    <a href="{% url 'documents:preview' document.pk %}" class="dashboard-btn">
+      <i class="bi bi-pencil-square"></i> Открыть в редакторе
+    </a>
+
+    <a href="{% url 'documents:download' document.pk %}?format=docx"
+       class="dashboard-btn dashboard-btn-primary">
+      <i class="bi bi-file-earmark-word"></i> Скачать DOCX
+    </a>
+
+    <a href="{% url 'documents:download' document.pk %}?format=pdf"
+       class="dashboard-btn dashboard-btn-primary">
+      <i class="bi bi-file-earmark-pdf"></i> Скачать PDF
+    </a>
+
+    <a href="{% url 'dashboard:document_delete' document.pk %}"
+       class="dashboard-btn danger">
+      <i class="bi bi-trash"></i> Удалить
+    </a>
+  </div>
+
+  <dl class="dashboard-meta">
+    <dt>Тип</dt><dd>{{ document.document_type.name }}</dd>
+    <dt>Шаблон</dt><dd>{{ document.template.name }}</dd>
+    <dt>Статус</dt>
+    <dd>
+      <span class="status status-{{ document.status }}">
+        {{ document.get_status_display }}
+      </span>
+    </dd>
+    <dt>Создан</dt><dd>{{ document.created_at|date:"d.m.Y H:i" }}</dd>
+    <dt>Обновлён</dt><dd>{{ document.updated_at|date:"d.m.Y H:i" }}</dd>
+  </dl>
+
+  {% if document.error_message %}
+    <div class="dashboard-alert danger">
+      <strong>Ошибка обработки:</strong> {{ document.error_message }}
+    </div>
+  {% endif %}
+
+  <section class="dashboard-block">
+    <h2>Исходный черновик</h2>
+    <pre class="dashboard-pre">{{ document.source_text }}</pre>
+  </section>
+
+  <section class="dashboard-block">
+    <h2>Обработанный текст</h2>
+    <pre class="dashboard-pre">{{ document.processed_text|default:"—" }}</pre>
+  </section>
+
+  <section class="dashboard-block">
+    <h2>Реквизиты</h2>
+    {% if document.extracted_fields %}
+      <ul class="dashboard-list">
+        {% for code, value in document.extracted_fields.items %}
+          <li><strong>{{ code }}:</strong> {{ value }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="dashboard-muted">Реквизиты не заполнены.</p>
+    {% endif %}
+
+    {% if document.missing_fields %}
+      <p class="dashboard-alert warning">
+        Недостающие реквизиты: {{ document.missing_fields|join:", " }}
+      </p>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}

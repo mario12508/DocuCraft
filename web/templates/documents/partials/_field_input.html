@@ -1,0 +1,5 @@
+<label class="doc-req">
+  <span class="doc-req-label">{{ field.label }}</span>
+  <input type="text" name="field_{{ field.code }}" value="{{ field.value|default:'' }}"
+         placeholder="{{ field.placeholder }}" {% if field.required %}required{% endif %}>
+</label>
