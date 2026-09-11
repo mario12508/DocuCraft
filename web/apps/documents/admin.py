@@ -10,7 +10,7 @@ from unfold.contrib.filters.admin import (
 )
 from unfold.decorators import display
 
-from .models import Document, DocumentType, RequiredField, Template
+from apps.documents.models import Document, DocumentType, RequiredField, Template
 
 
 class RequiredFieldInline(TabularInline):

@@ -9,8 +9,7 @@ class DocumentType(models.Model):
     code = models.SlugField("Код", unique=True)
     name = models.CharField("Название", max_length=100)
     structure_hint = models.TextField(
-        "Подсказка по структуре",
-        blank=True,
+        "Подсказка по структуре", blank=True,
         help_text="Например: «кому → от кого → суть → подпись»",
     )
     is_active = models.BooleanField("Активен", default=True)
@@ -32,8 +31,7 @@ class Template(models.Model):
     name = models.CharField("Название", max_length=100)
     description = models.TextField("Описание", blank=True)
     rules = models.JSONField(
-        "Правила оформления",
-        default=dict,
+        "Правила оформления", default=dict,
         help_text=(
             'Например: {"page": {"margins": {"top": 2, "bottom": 2, '
             '"left": 3, "right": 1.5}}, "font": {"name": "Times New Roman", '
@@ -55,10 +53,8 @@ class RequiredField(models.Model):
     """Обязательный реквизит для типа документа."""
 
     document_type = models.ForeignKey(
-        DocumentType,
-        on_delete=models.CASCADE,
-        related_name="required_fields",
-        verbose_name="Тип документа",
+        DocumentType, on_delete=models.CASCADE,
+        related_name="required_fields", verbose_name="Тип документа",
     )
     code = models.SlugField("Код реквизита")
     label = models.CharField("Название", max_length=100)
@@ -66,6 +62,14 @@ class RequiredField(models.Model):
         "Плейсхолдер", max_length=100, default="[Заполнить]",
     )
     order = models.PositiveIntegerField("Порядок", default=0)
+    ai_source = models.JSONField(
+        "Ключи из ответа ИИ", default=list, blank=True,
+        help_text=(
+            "Список ключей из JSON-ответа ИИ, которые нужно склеить "
+            "в этот реквизит. Например: [\"addressee_position\", "
+            "\"addressee_name\"]. Если пусто — используется code."
+        ),
+    )
 
     class Meta:
         verbose_name = "Обязательный реквизит"
@@ -88,14 +92,10 @@ class Document(models.Model):
     ]
 
     document_type = models.ForeignKey(
-        DocumentType,
-        on_delete=models.PROTECT,
-        verbose_name="Тип документа",
+        DocumentType, on_delete=models.PROTECT, verbose_name="Тип документа",
     )
     template = models.ForeignKey(
-        Template,
-        on_delete=models.PROTECT,
-        verbose_name="Шаблон",
+        Template, on_delete=models.PROTECT, verbose_name="Шаблон",
     )
     source_text = models.TextField("Исходный черновик")
     processed_text = models.TextField("Обработанный текст", blank=True)
@@ -112,6 +112,20 @@ class Document(models.Model):
         "Статус", max_length=20, choices=STATUS_CHOICES, default="draft",
     )
     error_message = models.TextField("Сообщение об ошибке", blank=True)
+
+    # НОВОЕ: информация о том, какой провайдер сработал
+    ai_provider = models.CharField(
+        "ИИ-провайдер", max_length=50, blank=True,
+    )
+    ai_model = models.CharField(
+        "ИИ-модель", max_length=100, blank=True,
+    )
+
+    # НОВОЕ: дата формирования документа (автозаполнение)
+    document_date = models.DateField(
+        "Дата документа", null=True, blank=True,
+    )
+
     created_at = models.DateTimeField("Создан", auto_now_add=True)
     updated_at = models.DateTimeField("Обновлён", auto_now=True)
 
@@ -122,13 +136,18 @@ class Document(models.Model):
             return "draft"
         return "ready"
 
-    def mark_ready(self):
-        self.status = "ready"
-        self.save(update_fields=["status"])
-
-    def mark_draft(self):
-        self.status = "draft"
-        self.save(update_fields=["status"])
+    def get_labelled_fields(self):
+        """Возвращает [(label, value, is_missing), ...] для шаблона."""
+        extracted = self.extracted_fields or {}
+        result = []
+        for rf in self.document_type.required_fields.all():
+            value = extracted.get(rf.code, "")
+            result.append({
+                "label": rf.label,
+                "value": value,
+                "is_missing": not value,
+            })
+        return result
 
     class Meta:
         verbose_name = "Документ"
@@ -137,4 +156,3 @@ class Document(models.Model):
 
     def __str__(self):
         return f"{self.document_type.name} от {self.created_at:%d.%m.%Y %H:%M}"
-

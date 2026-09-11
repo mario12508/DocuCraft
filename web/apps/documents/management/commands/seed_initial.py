@@ -12,10 +12,10 @@ DOCUMENT_TYPES = [
         "structure_hint": "кому → от кого → суть → подпись",
         "order": 1,
         "fields": [
-            ("addressee", "Адресат"),
-            ("sender", "От кого"),
-            ("subject", "Тема"),
-            ("date", "Дата"),
+            ("addressee", "Адресат", ["addressee_position", "addressee_name"]),
+            ("sender", "От кого", ["author_position", "author_name"]),
+            ("subject", "Тема", ["topic"]),
+            ("date", "Дата", ["date"]),
         ],
     },
     {
@@ -24,10 +24,10 @@ DOCUMENT_TYPES = [
         "structure_hint": "кому → от кого → суть → подпись",
         "order": 2,
         "fields": [
-            ("addressee", "Адресат"),
-            ("sender", "От кого"),
-            ("subject", "Тема"),
-            ("date", "Дата"),
+            ("addressee", "Адресат", ["addressee_position", "addressee_name"]),
+            ("sender", "От кого", ["author_position", "author_name"]),
+            ("subject", "Тема", ["topic"]),
+            ("date", "Дата", ["date"]),
         ],
     },
     {
@@ -36,9 +36,10 @@ DOCUMENT_TYPES = [
         "structure_hint": "заголовок → основной текст → подпись",
         "order": 3,
         "fields": [
-            ("subject", "Заголовок"),
-            ("date", "Дата"),
-            ("sender", "Подпись"),
+            ("addressee", "Адресат", ["addressee_position", "addressee_name"]),
+            ("sender", "От кого", ["author_position", "author_name"]),
+            ("subject", "Тема", ["topic"]),
+            ("date", "Дата", ["date"]),
         ],
     },
     {
@@ -47,10 +48,10 @@ DOCUMENT_TYPES = [
         "structure_hint": "адресат → обращение → суть → подпись",
         "order": 4,
         "fields": [
-            ("addressee", "Адресат"),
-            ("sender", "От кого"),
-            ("subject", "Тема"),
-            ("date", "Дата"),
+            ("addressee", "Адресат", ["addressee_position", "addressee_name"]),
+            ("sender", "От кого", ["author_position", "author_name"]),
+            ("subject", "Тема", ["topic"]),
+            ("date", "Дата", ["date"]),
         ],
     },
 ]
@@ -107,11 +108,12 @@ class Command(BaseCommand):
             doc_type, created = DocumentType.objects.update_or_create(
                 code=dt["code"], defaults=dt,
             )
-            for order_num, (code, label) in enumerate(fields, start=1):
+            for order_num, (code, label, ai_source) in enumerate(fields,
+                                                                 start=1):
                 RequiredField.objects.update_or_create(
-                    document_type=doc_type,
-                    code=code,
-                    defaults={"label": label, "order": order_num},
+                    document_type=doc_type, code=code,
+                    defaults={"label": label, "order": order_num,
+                              "ai_source": ai_source},
                 )
             mark = "+" if created else "~"
             self.stdout.write(f"  [{mark}] {doc_type.name}")

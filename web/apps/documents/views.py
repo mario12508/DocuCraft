@@ -1,21 +1,56 @@
 __all__ = ()
 
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 from django.views.generic import FormView
 
-from .docx_generator import generate_docx
-from .forms import Step1Form, Step2Form
-from .models import Document, DocumentType, Template
-from .pdf_generator import generate_pdf
+from apps.documents.docx_generator import generate_docx
+from apps.documents.forms import Step1Form, Step2Form
+from apps.documents.models import Document, DocumentType, Template
+from apps.documents.pdf_generator import generate_pdf
+from apps.documents.services.ai_processor import AIError, process_draft
 
 
 SESSION_DRAFT = "draft_source_text"
 SESSION_TYPE = "draft_document_type_id"
 SESSION_TEMPLATE = "draft_template_id"
+
+
+def _apply_ai_result(document, result, doc_type):
+    """Общий код: применяет ответ ИИ к документу. Используется в Step2 и retry."""
+    document.processed_text = result.processed_text
+    document.ai_provider = result.provider
+    document.ai_model = result.model
+
+    mapped = {}
+    for rf in doc_type.required_fields.all():
+        if rf.ai_source:
+            parts = [str(result.extracted_fields.get(k, ""))
+                     for k in rf.ai_source]
+            value = ", ".join(p for p in parts if p)
+        else:
+            value = result.extracted_fields.get(rf.code, "")
+        if value:
+            mapped[rf.code] = value
+
+    # Автозаполнение даты (ТЗ п. 1.3)
+    if "date" in [rf.code for rf in doc_type.required_fields.all()]:
+        if not mapped.get("date"):
+            mapped["date"] = timezone.now().strftime("%d.%m.%Y")
+
+    document.extracted_fields = mapped
+    document.missing_fields = [
+        rf.code for rf in doc_type.required_fields.all()
+        if not mapped.get(rf.code)
+    ]
+    document.status = document.recalc_status()
+    document.error_message = ""
+    document.save()
 
 
 def _apply_post_changes(request, document):
@@ -42,7 +77,6 @@ def _apply_post_changes(request, document):
     if processed is not None:
         document.processed_text = processed
 
-    # Автопересчёт только при обычном сохранении
     if document.status != "error":
         document.status = document.recalc_status()
 
@@ -50,7 +84,7 @@ def _apply_post_changes(request, document):
     return document
 
 
-class Step1View(FormView):
+class Step1View(LoginRequiredMixin, FormView):
     """Шаг 1. Ввод черновика."""
 
     template_name = "documents/step1.html"
@@ -66,7 +100,7 @@ class Step1View(FormView):
         return redirect("documents:step2")
 
 
-class Step2View(FormView):
+class Step2View(LoginRequiredMixin, FormView):
     """Шаг 2. Выбор типа документа и шаблона."""
 
     template_name = "documents/step2.html"
@@ -101,25 +135,31 @@ class Step2View(FormView):
         source_text = self.request.session.get(SESSION_DRAFT, "")
 
         document = Document.objects.create(
-            document_type=dt,
-            template=tpl,
-            source_text=source_text,
-            processed_text=source_text,
+            document_type=dt, template=tpl,
+            source_text=source_text, processed_text=source_text,
             extracted_fields={},
             missing_fields=[f.code for f in dt.required_fields.all()],
-            status="draft",
+            status="processing",
         )
 
-        # Чистим сессию после создания документа
         for key in (SESSION_DRAFT, SESSION_TYPE, SESSION_TEMPLATE):
             self.request.session.pop(key, None)
 
-        return redirect("documents:preview", pk=document.pk)
+        try:
+            result = process_draft(source_text, dt.name)
+            _apply_ai_result(document, result, dt)
+        except AIError as exc:
+            document.status = "error"
+            document.error_message = str(exc)
+            document.missing_fields = [
+                rf.code for rf in dt.required_fields.all()
+            ]
+            document.save()
 
         return redirect("documents:preview", pk=document.pk)
 
 
-class PreviewView(View):
+class PreviewView(LoginRequiredMixin, View):
     template_name = "documents/preview.html"
 
     def get_document(self, pk):
@@ -169,7 +209,7 @@ class PreviewView(View):
             messages.info(request, "Документ переведён в черновик.")
             return redirect("documents:preview", pk=document.pk)
 
-        # 2) Обычное сохранение правок + автопересчёт статуса
+        # 2) Обычное сохранение правок
         _apply_post_changes(request, document)
 
         if action == "download":
@@ -179,11 +219,27 @@ class PreviewView(View):
             url = reverse("documents:download", args=[document.pk])
             return redirect(f"{url}?format=pdf")
 
+        # 3) Retry — отдельная ветка со СВОИМ сообщением и СВОИМ return
+        if action == "retry":
+            try:
+                result = process_draft(
+                    document.source_text, document.document_type.name,
+                )
+                _apply_ai_result(document, result, document.document_type)
+                messages.success(request, "Документ успешно обработан.")
+            except AIError as exc:
+                document.status = "error"
+                document.error_message = str(exc)
+                document.save()
+                messages.error(request, f"ИИ недоступен: {exc}")
+            return redirect("documents:preview", pk=document.pk)
+
+        # 4) Простое сохранение
         messages.success(request, "Изменения сохранены.")
         return redirect("documents:preview", pk=document.pk)
 
 
-class DownloadView(View):
+class DownloadView(LoginRequiredMixin, View):
     """Генерирует DOCX или PDF и отдаёт файл."""
 
     def get(self, request, pk):

@@ -378,10 +378,33 @@
   border-color: #111;
 }
 
+.dashboard-btn-primary:hover {
+  background: #2a2a2a;
+  border-color: #2a2a2a;
+  color: #fff;
+}
+
+.dashboard-btn-primary:active {
+  background: #000;
+  border-color: #000;
+}
+
+/* Основная кнопка — тёмная тема */
 [data-theme="dark"] .dashboard-btn-primary {
   background: #e8e8e8;
   color: #111;
   border-color: #e8e8e8;
+}
+
+[data-theme="dark"] .dashboard-btn-primary:hover {
+  background: #cfcfcf;
+  border-color: #cfcfcf;
+  color: #111;
+}
+
+[data-theme="dark"] .dashboard-btn-primary:active {
+  background: #b8b8b8;
+  border-color: #b8b8b8;
 }
 
 .dashboard-btn.danger {

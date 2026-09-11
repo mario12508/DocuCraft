@@ -1,12 +1,174 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Главная{% endblock %}
+{% block title %}DocuCraft — документы за 3 шага{% endblock %}
 
 {% block extra_css %}
+  {{ block.super }}
   <link rel="stylesheet" href="{% static 'css/homepage/home.css' %}">
 {% endblock %}
 
 {% block content %}
+
+<!-- ─────────────────────────────  HERO  ───────────────────────────── -->
+<section class="hp-hero">
+  <div class="hp-container">
+    <div class="hp-hero-inner">
+      <span class="hp-badge">
+        <i class="bi bi-stars"></i>
+        ИИ-конструктор служебных документов
+      </span>
+
+      <h1 class="hp-hero-title">
+        Черновик&nbsp;— в готовый<br>
+        <span class="hp-accent">официальный документ</span>
+      </h1>
+
+      <p class="hp-hero-subtitle">
+        DocuCraft приводит текст к деловому стилю, проверяет реквизиты
+        и собирает редактируемый DOCX по правилам вашего шаблона —
+        за три шага, без Word и без ручной вёрстки.
+      </p>
+
+      <div class="hp-hero-actions">
+        <a href="{% url 'documents:step1' %}" class="hp-btn hp-btn-primary">
+          <i class="bi bi-magic"></i>
+          Создать документ
+        </a>
+        <a href="{% url 'dashboard:home' %}" class="hp-btn">
+          <i class="bi bi-grid"></i>
+          Открыть панель
+        </a>
+      </div>
+
+      <div class="hp-hero-meta">
+        <span><i class="bi bi-check2"></i> 4 типа документов</span>
+        <span><i class="bi bi-check2"></i> 2 шаблона оформления</span>
+        <span><i class="bi bi-check2"></i> Экспорт в DOCX и PDF</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────  ТРИ ШАГА  ─────────────────────────── -->
+<section class="hp-section hp-steps">
+  <div class="hp-container">
+    <div class="hp-section-head">
+      <h2>Документ за 3 шага</h2>
+      <p>Понятный сценарий — без обучения и инструкций.</p>
+    </div>
+
+    <div class="hp-steps-grid">
+      <div class="hp-step-card">
+        <div class="hp-step-num">1</div>
+        <h3>Ввод текста</h3>
+        <p>Вставьте черновик как есть — с опечатками, разговорными оборотами, без структуры.</p>
+      </div>
+      <div class="hp-step-card">
+        <div class="hp-step-num">2</div>
+        <h3>Тип и шаблон</h3>
+        <p>Выберите тип документа и оформление организации. Содержание и стиль разделены.</p>
+      </div>
+      <div class="hp-step-card">
+        <div class="hp-step-num">3</div>
+        <h3>Готовый DOCX</h3>
+        <p>ИИ приводит текст к деловому стилю, шаблон применяет правила, файл можно скачать.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────────  ВОЗМОЖНОСТИ  ────────────────────────── -->
+<section class="hp-section hp-features">
+  <div class="hp-container">
+    <div class="hp-section-head">
+      <h2>Что умеет DocuCraft</h2>
+      <p>Ключевая ценность — в автоматике там, где раньше был ручной труд.</p>
+    </div>
+
+    <div class="hp-features-grid">
+      <article class="hp-feature">
+        <div class="hp-feature-icon">
+          <i class="bi bi-spellcheck"></i>
+        </div>
+        <h3>Орфография и стиль</h3>
+        <p>Исправляем ошибки, убираем просторечия и канцелярит, приводим формулировки к деловому стилю.</p>
+      </article>
+
+      <article class="hp-feature">
+        <div class="hp-feature-icon">
+          <i class="bi bi-shield-check"></i>
+        </div>
+        <h3>Никаких выдумок</h3>
+        <p>ИИ не добавляет факты, даты и ФИО, которых не было в черновике. Смысл сохраняется.</p>
+      </article>
+
+      <article class="hp-feature">
+        <div class="hp-feature-icon">
+          <i class="bi bi-list-check"></i>
+        </div>
+        <h3>Контроль реквизитов</h3>
+        <p>Проверяем обязательные поля по типу документа. Незаполненные явно помечаются в итоговом файле.</p>
+      </article>
+
+      <article class="hp-feature">
+        <div class="hp-feature-icon">
+          <i class="bi bi-file-earmark-word"></i>
+        </div>
+        <h3>Программная вёрстка</h3>
+        <p>Оформление задаётся шаблоном, а не ИИ: поля, шрифты, интервалы, отступы, колонтитулы.</p>
+      </article>
+
+      <article class="hp-feature">
+        <div class="hp-feature-icon">
+          <i class="bi bi-pencil-square"></i>
+        </div>
+        <h3>Предпросмотр</h3>
+        <p>Перед скачиванием можно отредактировать текст руками и заполнить недостающие реквизиты.</p>
+      </article>
+
+      <article class="hp-feature">
+        <div class="hp-feature-icon">
+          <i class="bi bi-arrow-repeat"></i>
+        </div>
+        <h3>Устойчив к сбоям</h3>
+        <p>Если один ИИ-провайдер недоступен — переключаемся на следующий. Черновик не теряется.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────────  ТИПЫ ДОКУМЕНТОВ  ────────────────────────── -->
+<section class="hp-section hp-doctypes">
+  <div class="hp-container">
+    <div class="hp-section-head">
+      <h2>Поддерживаемые типы</h2>
+      <p>Для каждого типа — свой набор обязательных реквизитов и структура.</p>
+    </div>
+
+    <div class="hp-chips">
+      <span class="hp-chip">Служебная записка</span>
+      <span class="hp-chip">Докладная записка</span>
+      <span class="hp-chip">Информационная справка</span>
+      <span class="hp-chip">Письмо</span>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────  CTA  ───────────────────────────── -->
+<section class="hp-cta">
+  <div class="hp-container">
+    <div class="hp-cta-card">
+      <div class="hp-cta-text">
+        <h2>Готовы попробовать?</h2>
+        <p>Вставьте черновик — остальное сделает DocuCraft.</p>
+      </div>
+      <a href="{% url 'documents:step1' %}" class="hp-btn hp-btn-primary hp-btn-lg">
+        <i class="bi bi-magic"></i>
+        Создать документ
+      </a>
+    </div>
+  </div>
+</section>
 
 {% endblock %}

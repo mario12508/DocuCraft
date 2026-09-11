@@ -296,3 +296,49 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@resend.dev")
+
+AI_PROVIDERS = [
+    {
+        "name": "groq_primary",
+        "base_url": "https://api.groq.com/openai/v1",
+        "api_key": os.getenv("GROQ_API_KEY", ""),
+        "model": "openai/gpt-oss-120b",
+        "timeout": 8,
+        "supports_json": True,
+    },
+    {
+        "name": "groq_backup",
+        "base_url": "https://api.groq.com/openai/v1",
+        "api_key": os.getenv("GROQ_API_KEY", ""),
+        "model": "openai/gpt-oss-20b",
+        "timeout": 8,
+        "supports_json": True,
+    },
+    {
+        "name": "gemini",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "api_key": os.getenv("GEMINI_API_KEY", ""),
+        "model": "gemini-3.8-flash",
+        "timeout": 20,
+        "supports_json": True,
+    },
+    {
+        "name": "openrouter_nemotron",
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key": os.getenv("OPENROUTER_API_KEY", ""),
+        "model": "nvidia/nemotron-3.5-lightning:free",
+        "timeout": 25,
+        "supports_json": True,
+    },
+    {
+        "name": "openrouter_gpt_oss",
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key": os.getenv("OPENROUTER_API_KEY", ""),
+        "model": "openai/gpt-oss-120b:free",
+        "timeout": 25,
+        "supports_json": True,
+    },
+]
+
+AI_TOTAL_TIMEOUT = 45
+

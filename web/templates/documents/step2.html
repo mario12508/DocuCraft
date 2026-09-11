@@ -5,7 +5,7 @@
 
 {% block extra_css %}
 {{ block.super }}
-<link rel="stylesheet" href="{% static 'css/documents/wizard.css' %}">
+<link rel="stylesheet" href="{% static 'css/documents/documents.css' %}">
 {% endblock %}
 
 {% block dashboard_content %}
@@ -110,8 +110,11 @@
   const form = document.getElementById('step2Form');
   const overlay = document.getElementById('processingOverlay');
   const steps = overlay ? overlay.querySelectorAll('.doc-processing-steps li') : [];
+  const note = overlay ? overlay.querySelector('.doc-processing-note') : null;
 
   if (!form || !overlay) return;
+
+  let elapsedTimer = null;
 
   form.addEventListener('submit', function (e) {
     if (form.dataset.submitting === '1') return;
@@ -121,20 +124,33 @@
     overlay.hidden = false;
     document.body.classList.add('doc-processing-active');
 
+    // Поэтапная подсветка — 4 шага, но последний «висит» до ответа
     let i = 0;
-    function advance() {
+    const advance = () => {
       if (i > 0 && steps[i - 1]) steps[i - 1].classList.add('done');
-      if (i < steps.length) {
+      if (i < steps.length - 1) {
         steps[i].classList.add('active');
         i++;
-        setTimeout(advance, 350);
-      } else {
-        setTimeout(function () {
-          HTMLFormElement.prototype.submit.call(form);
-        }, 250);
+        setTimeout(advance, 400);
+      } else if (steps[steps.length - 1]) {
+        steps[steps.length - 1].classList.add('active');
       }
-    }
+    };
     advance();
+
+    // Секундомер
+    const start = Date.now();
+    if (note) {
+      elapsedTimer = setInterval(() => {
+        const s = Math.round((Date.now() - start) / 1000);
+        note.textContent = `Обрабатываем… ${s} с. Обычно это занимает 2–15 секунд.`;
+      }, 500);
+    }
+
+    // Реальная отправка — через 1.6 сек (чтобы анимация успела)
+    setTimeout(() => {
+      HTMLFormElement.prototype.submit.call(form);
+    }, 1600);
   });
 })();
 </script>

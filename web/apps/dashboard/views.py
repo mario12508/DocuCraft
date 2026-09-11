@@ -1,15 +1,14 @@
 __all__ = ()
 
 from django.contrib import messages
-from django.http import Http404
-from django.shortcuts import get_object_or_404, redirect
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import DeleteView, DetailView, ListView, TemplateView
 
 from apps.documents.models import Document, DocumentType, Template
 
 
-class Home(TemplateView):
+class Home(LoginRequiredMixin, TemplateView):
     """Главная страница рабочей панели."""
 
     template_name = "dashboard/home.html"
@@ -23,7 +22,7 @@ class Home(TemplateView):
         return context
 
 
-class DocumentListView(ListView):
+class DocumentListView(LoginRequiredMixin, ListView):
     """Список созданных документов."""
 
     model = Document
@@ -56,7 +55,7 @@ class DocumentListView(ListView):
         return context
 
 
-class DocumentDetailView(DetailView):
+class DocumentDetailView(LoginRequiredMixin, DetailView):
     """Карточка одного документа."""
 
     model = Document
@@ -73,7 +72,7 @@ class DocumentDetailView(DetailView):
         return context
 
 
-class DocumentDeleteView(DeleteView):
+class DocumentDeleteView(LoginRequiredMixin, DeleteView):
     """Удаление документа."""
 
     model = Document

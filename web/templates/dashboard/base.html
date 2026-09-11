@@ -41,7 +41,7 @@
         </a>
 
         <a href="{% url 'documents:step1' %}"
-           class="dashboard-nav-link">
+           class="dashboard-nav-link {% if 'step' in request.resolver_match.url_name %}active{% endif %}">
           <i class="bi bi-plus-square"></i>
           <span class="link-text">Создать документ</span>
           <span class="tooltip">Создать документ</span>

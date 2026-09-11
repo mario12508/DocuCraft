@@ -67,19 +67,31 @@
 
   <section class="dashboard-block">
     <h2>Реквизиты</h2>
-    {% if document.extracted_fields %}
-      <ul class="dashboard-list">
-        {% for code, value in document.extracted_fields.items %}
-          <li><strong>{{ code }}:</strong> {{ value }}</li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="dashboard-muted">Реквизиты не заполнены.</p>
-    {% endif %}
+    {% with fields=document.get_labelled_fields %}
+      {% if fields %}
+        <ul class="dashboard-list">
+          {% for f in fields %}
+            <li>
+              <strong>{{ f.label }}:</strong>
+              {% if f.value %}
+                {{ f.value }}
+              {% else %}
+                <span class="dashboard-muted">[не заполнено]</span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="dashboard-muted">Реквизиты не заполнены.</p>
+      {% endif %}
+    {% endwith %}
 
     {% if document.missing_fields %}
       <p class="dashboard-alert warning">
-        Недостающие реквизиты: {{ document.missing_fields|join:", " }}
+        Недостающие реквизиты:
+        {% for f in document.get_labelled_fields %}
+          {% if f.is_missing %}{{ f.label }}{% if not forloop.last %}, {% endif %}{% endif %}
+        {% endfor %}
       </p>
     {% endif %}
   </section>
