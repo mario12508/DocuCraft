@@ -1,8 +1,7 @@
 __all__ = ()
 
-from django import forms
-
 from apps.documents.models import DocumentType, Template
+from django import forms
 
 
 class Step1Form(forms.Form):

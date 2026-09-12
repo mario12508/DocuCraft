@@ -1,8 +1,7 @@
 __all__ = ()
 
-from django.urls import path
-
 from apps.documents import views
+from django.urls import path
 
 app_name = "documents"
 

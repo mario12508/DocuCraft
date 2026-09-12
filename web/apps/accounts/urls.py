@@ -1,5 +1,4 @@
 from apps.accounts import views
-
 from django.contrib.auth.views import (
     PasswordResetCompleteView,
     PasswordResetConfirmView,

@@ -1,9 +1,7 @@
 __all__ = ()
 
-from django.core.management.base import BaseCommand
-
 from apps.documents.models import DocumentType, RequiredField, Template
-
+from django.core.management.base import BaseCommand
 
 DOCUMENT_TYPES = [
     {
@@ -142,6 +140,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from pathlib import Path
+
         from django.conf import settings
         from django.core.files import File
         from django.db.models import ProtectedError
@@ -202,7 +201,7 @@ class Command(BaseCommand):
                 src = Path(templates_dir) / file_name
                 if src.exists():
                     # Всегда перезаписываем файл — гарантируем актуальность
-                    with open(src, "rb") as f:
+                    with src.open("rb") as f:
                         obj.docx_template.save(file_name, File(f), save=True)
                     self.stdout.write(f"    привязан файл: {file_name}")
                 else:

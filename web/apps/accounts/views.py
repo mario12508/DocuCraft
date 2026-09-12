@@ -4,6 +4,7 @@ import asyncio
 import json
 import secrets
 
+import requests
 from apps.accounts.forms import (
     AvatarUploadForm,
     CustomAuthenticationForm,
@@ -19,9 +20,7 @@ from apps.utils import (
     send_password_reset_email,
     send_verification_email,
 )
-
 from asgiref.sync import sync_to_async
-
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import (
@@ -40,9 +39,6 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
-
-import requests
-
 from social_django.models import UserSocialAuth
 
 
@@ -104,7 +100,7 @@ class AuthView(AnonymousRequiredMixin, TemplateView):
             context["active_tab"] = "login"
             return self.render_to_response(context)
 
-        elif request.POST.get("action") == "register":
+        if request.POST.get("action") == "register":
             form = CustomUserCreationForm(request.POST)
             if form.is_valid():
                 user = form.save(commit=False)
@@ -197,15 +193,14 @@ class ProfileView(LoginRequiredMixin, TemplateView):
                 profile.save()
 
             return redirect("accounts:profile")
-        else:
-            form = ProfileEditForm(request.POST, instance=request.user)
-            if form.is_valid():
-                form.save()
-                return redirect("accounts:profile")
+        form = ProfileEditForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            return redirect("accounts:profile")
 
-            context = self.get_context_data()
-            context["profile_form"] = form
-            return self.render_to_response(context)
+        context = self.get_context_data()
+        context["profile_form"] = form
+        return self.render_to_response(context)
 
 
 class LogoutView(LoginRequiredMixin, View):
@@ -611,10 +606,10 @@ class CustomPasswordResetView(PasswordResetView):
     def form_valid(self, form):
         email = form.cleaned_data["email"]
         from django.contrib.auth.models import User
-        from django.contrib.sites.shortcuts import get_current_site
-        from django.utils.http import urlsafe_base64_encode
-        from django.utils.encoding import force_bytes
         from django.contrib.auth.tokens import default_token_generator
+        from django.contrib.sites.shortcuts import get_current_site
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
 
         user = User.objects.filter(email=email).first()
 

@@ -6,13 +6,11 @@ from django.contrib import admin, messages
 from django.shortcuts import redirect
 from django.urls import include, path
 from django.views.generic import TemplateView
-
 from social_core.exceptions import (
     AuthAlreadyAssociated,
     AuthCanceled,
     AuthException,
 )
-
 from social_django.views import complete
 
 

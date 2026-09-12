@@ -3,7 +3,6 @@ __all__ = ()
 import logging
 from io import BytesIO
 
-from django.conf import settings
 from docx import Document as DocxDocument
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn

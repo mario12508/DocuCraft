@@ -1,11 +1,10 @@
 __all__ = ()
 
+from apps.documents.models import Document, DocumentType, Template
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import DeleteView, DetailView, ListView, TemplateView
-
-from apps.documents.models import Document, DocumentType, Template
 
 
 class Home(LoginRequiredMixin, TemplateView):

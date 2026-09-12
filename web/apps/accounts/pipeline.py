@@ -1,9 +1,7 @@
 __all__ = ()
 
 from django.contrib.auth.models import User
-
 from social_core.exceptions import AuthAlreadyAssociated
-
 from social_django.models import UserSocialAuth
 
 
@@ -21,47 +19,47 @@ def check_social_user(backend, uid, user=None, *args, **kwargs):
             if not user or not user.is_authenticated:
                 return {"user": social.user}
 
-        return
+    return None
 
 
 def associate_by_email(backend, details, user=None, *args, **kwargs):
-    if backend.name in ["yandex-oauth2", "github", "google-oauth2"]:
-        email = details.get("email")
+    if backend.name not in ["yandex-oauth2", "github", "google-oauth2"]:
+        return None
 
-        if not email:
-            return
+    email = details.get("email")
+    if not email:
+        return None
 
-        if user and user.pk:
-            existing_user = (
-                User.objects.filter(email=email).exclude(id=user.id).first()
-            )
-            if existing_user:
-                social = UserSocialAuth.objects.filter(
-                    user=existing_user,
-                    provider=backend.name,
-                ).first()
-
-                if social:
-                    from django.contrib import messages
-
-                    request = kwargs.get("request")
-                    if request:
-                        messages.error(
-                            request,
-                            "Этот аккаунт уже привязан к другому пользователю.",
-                        )
-
-                    return
-                else:
-                    return {
-                        "user": existing_user,
-                    }
-
-            return
-
-        existing_user = User.objects.filter(email=email).first()
+    if user and user.pk:
+        existing_user = (
+            User.objects.filter(email=email).exclude(id=user.id).first()
+        )
         if existing_user:
+            social = UserSocialAuth.objects.filter(
+                user=existing_user,
+                provider=backend.name,
+            ).first()
+
+            if social:
+                from django.contrib import messages
+
+                request = kwargs.get("request")
+                if request:
+                    messages.error(
+                        request,
+                        "Этот аккаунт уже привязан к другому пользователю.",
+                    )
+                return None
+
             return {"user": existing_user}
+
+        return None
+
+    existing_user = User.objects.filter(email=email).first()
+    if existing_user:
+        return {"user": existing_user}
+
+    return None
 
 
 def save_avatar(backend, user, response, *args, **kwargs):

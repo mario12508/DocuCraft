@@ -4,7 +4,6 @@ import calendar
 import datetime
 
 from apps.news.models import News
-
 from django.views.generic import TemplateView
 
 MONTHS_RU = {

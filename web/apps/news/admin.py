@@ -1,9 +1,7 @@
 __all__ = ()
 
 from apps.news.models import News
-
 from django.contrib import admin
-
 from unfold.admin import ModelAdmin
 
 
