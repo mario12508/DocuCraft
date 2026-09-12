@@ -1,0 +1,356 @@
+/* =====================================================================
+   Список документов — адаптив и кнопка удаления
+   ===================================================================== */
+
+/* ── Верхняя панель: заголовок + действия ── */
+.docs-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.docs-top-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.docs-top-text h1 {
+  font-size: 24px;
+  margin: 0 0 6px;
+  color: var(--text-primary);
+}
+
+.docs-top-text p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.docs-top-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ── Фильтры ── */
+.docs-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-color);
+  margin-bottom: 20px;
+}
+
+.docs-filters label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 180px;
+}
+
+.docs-filters label > span {
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.docs-filters select {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-sidebar);
+  color: var(--text-primary);
+  font-size: 13.5px;
+  font-family: inherit;
+  min-width: 0;
+}
+
+.docs-filters-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* ── Кнопка удаления ── */
+.doc-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #c62828;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.doc-delete-btn:hover {
+  background: rgba(198, 40, 40, 0.08);
+  border-color: rgba(198, 40, 40, 0.25);
+  text-decoration: none;
+  color: #c62828;
+}
+
+.doc-delete-btn i {
+  font-size: 14px;
+  line-height: 1;
+}
+
+[data-theme="dark"] .doc-delete-btn {
+  color: #ef9a9a;
+}
+
+[data-theme="dark"] .doc-delete-btn:hover {
+  background: rgba(239, 154, 154, 0.1);
+  border-color: rgba(239, 154, 154, 0.3);
+  color: #ef9a9a;
+}
+
+/* ── Кнопка удаления в карточке ── */
+.doc-card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.doc-card-actions .doc-delete-btn {
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+/* ── Карточка — делаем кликабельной только верхнюю часть ── */
+.doc-card-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 16px 12px;
+}
+
+.doc-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-decoration: none;
+  color: inherit;
+  flex: 1;
+}
+
+.doc-card-main:hover {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* ── Пагинация ── */
+.docs-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 12px 0;
+}
+
+.docs-pagination a,
+.docs-pagination span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-sidebar);
+  color: var(--text-primary);
+  font-size: 13.5px;
+  text-decoration: none;
+  min-height: 38px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.docs-pagination a:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
+}
+
+.docs-pagination .docs-pagination-info {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ── Пустое состояние ── */
+.docs-empty {
+  padding: 48px 24px;
+  text-align: center;
+  border: 1px dashed var(--border-color);
+  border-radius: 14px;
+  background: var(--bg-sidebar);
+}
+
+.docs-empty i {
+  display: block;
+  font-size: 36px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.docs-empty p {
+  margin: 0 0 18px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* =====================================================================
+   Мобильный адаптив
+   ===================================================================== */
+
+/* Планшет */
+@media (max-width: 900px) {
+  .docs-filters {
+    gap: 10px;
+  }
+
+  .docs-filters label {
+    min-width: 160px;
+  }
+
+  .docs-filters-actions {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* Мобильный — принудительно карточки */
+@media (max-width: 720px) {
+  /* Скрываем переключатель вида */
+  .dashboard-view-toggle {
+    display: none !important;
+  }
+
+  /* Скрываем таблицу всегда на мобильных */
+  .docs-view .docs-table-wrap {
+    display: none !important;
+  }
+
+  /* Показываем карточки всегда */
+  .docs-view .docs-cards {
+    display: grid !important;
+  }
+
+  .docs-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .docs-top-text h1 {
+    font-size: 20px;
+  }
+
+  .docs-top-actions {
+    width: 100%;
+  }
+
+  .docs-top-actions .dashboard-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* Фильтры вертикально */
+  .docs-filters {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px;
+  }
+
+  .docs-filters label {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .docs-filters select {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+
+  .docs-filters-actions {
+    flex-direction: row;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .docs-filters-actions .dashboard-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 11px 14px;
+  }
+
+  /* Карточки */
+  .doc-card-item {
+    padding: 14px 14px 10px;
+  }
+
+  .doc-card-title {
+    font-size: 15px;
+  }
+
+  .doc-card-date {
+    font-size: 11.5px;
+  }
+
+  /* Пагинация */
+  .docs-pagination {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .docs-pagination a,
+  .docs-pagination span {
+    padding: 8px 12px;
+    font-size: 13px;
+    min-height: 40px;
+  }
+}
+
+/* Очень узкие экраны */
+@media (max-width: 400px) {
+  .docs-top-text h1 {
+    font-size: 18px;
+  }
+
+  .docs-top-text p {
+    font-size: 13px;
+  }
+
+  .doc-card-actions {
+    padding-top: 8px;
+    margin-top: 6px;
+  }
+}
