@@ -6,7 +6,9 @@
 
 **Репозиторий:** https://gitverse.ru/hackrus.experts/cempionat-fsp-2026_it_miks_39
 
-**Скринкаст**: [screencast.mp4](screencast.mp4)
+**Скринкаст**: 
+- [rutube](https://rutube.ru/play/embed/f6ae16a87668349c05d99408c001ca67/?p=TqR9TjtBXqOOWBNB1AOYVg)
+- [screencast.mp4](screencast.mp4)
 
 Сервис превращает черновик пользователя в готовый редактируемый DOCX-документ. ИИ приводит текст к официально-деловому стилю, не искажая смысла и не добавляя отсутствующих фактов. Программный модуль применяет правила выбранного шаблона и формирует файл.
 
