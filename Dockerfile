@@ -3,6 +3,14 @@ FROM python:3.10-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libicu-dev \
     && rm -rf /var/lib/apt/lists/*
+RUN echo "deb http://deb.debian.org/debian bookworm contrib non-free" > /etc/apt/sources.list.d/contrib.list
+RUN echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | debconf-set-selections \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        fontconfig \
+        ttf-mscorefonts-installer \
+    && rm -rf /var/lib/apt/lists/*
+RUN fc-cache -f -v
 
 WORKDIR /usr/src/app
 
