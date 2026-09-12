@@ -12,6 +12,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import DeleteView, DetailView, ListView, TemplateView
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, render
+from django.views import View
 
 from apps.documents.models import Document, DocumentType, Template
 from apps.documents.services.ai_processor import pick_provider
@@ -231,3 +234,115 @@ def _pick_provider():
         if p.get("api_key"):
             return p
     return None
+
+class TemplatePreviewView(LoginRequiredMixin, View):
+    """Рендерит .docx-шаблон в HTML для предпросмотра."""
+
+    def get(self, request, pk):
+        try:
+            import mammoth
+        except ImportError:
+            return HttpResponse(
+                "Для предпросмотра установите mammoth: pip install mammoth",
+                status=500,
+                content_type="text/plain; charset=utf-8",
+            )
+
+        template = get_object_or_404(Template, pk=pk)
+
+        if not template.docx_template:
+            return HttpResponse(
+                "У шаблона нет .docx-файла.",
+                status=404,
+                content_type="text/plain; charset=utf-8",
+            )
+
+        # Открываем файл-шаблон и конвертируем в HTML
+        template.docx_template.open("rb")
+        try:
+            result = mammoth.convert_to_html(template.docx_template)
+        finally:
+            template.docx_template.close()
+
+        return render(
+            request,
+            "documents/partials/_docx_preview.html",
+            {
+                "document": None,
+                "html": result.value,
+                "warnings": result.messages,
+            },
+        )
+
+class TemplatePreviewPDFView(LoginRequiredMixin, View):
+    """
+    PDF-предпросмотр шаблона: генерируем фейковый Document,
+    в котором вместо значений — метки полей вида [Адресат].
+    """
+
+    def get(self, request, pk):
+        from apps.documents.models import Document, DocumentType
+        from apps.documents.pdf_generator import generate_pdf, PDFError
+
+        template = get_object_or_404(Template, pk=pk)
+
+        if not template.docx_template:
+            return HttpResponse(
+                "У шаблона нет .docx-файла.",
+                status=404,
+                content_type="text/plain; charset=utf-8",
+            )
+
+        # Тип документа нужен только для заполнения DocumentType FK.
+        # Логика генерации не зависит от него, если placeholders заданы.
+        doc_type = DocumentType.objects.filter(is_active=True).first()
+        if doc_type is None:
+            return HttpResponse(
+                "Нет ни одного активного типа документа.",
+                status=500,
+                content_type="text/plain; charset=utf-8",
+            )
+
+        # Собираем заглушки из placeholders: [Адресат] = метка
+        fake_fields = {}
+        for p in (template.placeholders or []):
+            code = p.get("code")
+            if not code:
+                continue
+            label = p.get("label") or code
+            fake_fields[code] = f"[{label}]"
+
+        fake_doc = Document(
+            document_type=doc_type,
+            template=template,
+            source_text="",
+            processed_text="[Здесь будет основной текст документа]",
+            extracted_fields=fake_fields,
+            missing_fields=[],
+            status="ready",
+        )
+        # Не сохраняем в БД — pk нужен только для имени файла
+        fake_doc.pk = 0
+
+        try:
+            pdf_buffer = generate_pdf(fake_doc)
+        except PDFError as exc:
+            return HttpResponse(
+                f"Предпросмотр недоступен: {exc}",
+                status=503,
+                content_type="text/plain; charset=utf-8",
+            )
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).exception("Template PDF preview failed")
+            return HttpResponse(
+                f"Ошибка предпросмотра: {exc}",
+                status=500,
+                content_type="text/plain; charset=utf-8",
+            )
+
+        response = HttpResponse(pdf_buffer.read(), content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f'inline; filename="template_{template.pk}_preview.pdf"'
+        )
+        return response

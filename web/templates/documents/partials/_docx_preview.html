@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Предпросмотр — Документ #{{ document.pk }}</title>
+  <title>Предпросмотр{% if document %} — Документ #{{ document.pk }}{% endif %}</title>
   <link rel="stylesheet" href="{% static 'css/documents/documents.css' %}">
 </head>
 <body style="margin:0; background:#f0f0f0;">

@@ -12,4 +12,9 @@ urlpatterns = [
     path("<int:pk>/preview-docx/",
          views.DocxPreviewView.as_view(), name="preview_docx"),
     path("<int:pk>/download/", views.DownloadView.as_view(), name="download"),
+path(
+    "<int:pk>/preview-pdf/",
+    views.DocumentPreviewPDFView.as_view(),
+    name="preview_pdf",
+),
 ]

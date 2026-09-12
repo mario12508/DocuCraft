@@ -12,7 +12,7 @@
   </div>
 
   <form method="post" enctype="multipart/form-data" class="dashboard-form"
-        style="max-width: 640px;">
+        style="max-width: 640px;" id="templateUploadForm">
 
     {% csrf_token %}
 
@@ -31,9 +31,39 @@
                 placeholder="Кратко опишите, для каких документов подходит шаблон"></textarea>
     </div>
 
+    {# ── Кастомная загрузка файла ── #}
     <div class="dashboard-form-field">
-      <label for="id_file">Файл .docx</label>
-      <input type="file" id="id_file" name="file" accept=".docx" required>
+      <label>Файл .docx</label>
+
+      <label for="id_file" class="file-drop" id="fileDrop">
+        <input type="file" id="id_file" name="file" accept=".docx" required
+               hidden>
+
+        {# Состояние: пусто #}
+        <div class="file-drop-empty" id="fileDropEmpty">
+          <i class="bi bi-cloud-arrow-up file-drop-icon"></i>
+          <div class="file-drop-title">
+            Перетащите файл сюда или <span class="file-drop-link">выберите</span>
+          </div>
+          <div class="file-drop-hint">
+            Поддерживается только <code>.docx</code>, до 5 МБ
+          </div>
+        </div>
+
+        {# Состояние: файл выбран #}
+        <div class="file-drop-filled" id="fileDropFilled" hidden>
+          <i class="bi bi-file-earmark-word file-drop-filled-icon"></i>
+          <div class="file-drop-filled-info">
+            <div class="file-drop-filled-name" id="fileName"></div>
+            <div class="file-drop-filled-size" id="fileSize"></div>
+          </div>
+          <button type="button" class="file-drop-remove" id="fileRemove"
+                  aria-label="Убрать файл">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      </label>
+
       <div class="dashboard-form-help">
         Загрузите Word-файл, в котором вместо значений стоят плейсхолдеры
         вида <code>[Кому]</code>, <code>[Дата]</code>,
@@ -54,4 +84,92 @@
   </form>
 
 </div>
+
+<script>
+(function () {
+  const drop = document.getElementById('fileDrop');
+  const input = document.getElementById('id_file');
+  const emptyState = document.getElementById('fileDropEmpty');
+  const filledState = document.getElementById('fileDropFilled');
+  const nameEl = document.getElementById('fileName');
+  const sizeEl = document.getElementById('fileSize');
+  const removeBtn = document.getElementById('fileRemove');
+
+  if (!drop || !input) return;
+
+  function humanSize(bytes) {
+    if (bytes < 1024) return bytes + ' Б';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' МБ';
+  }
+
+  function showFile(file) {
+    if (!file) {
+      emptyState.hidden = false;
+      filledState.hidden = true;
+      drop.classList.remove('has-file');
+      return;
+    }
+    nameEl.textContent = file.name;
+    sizeEl.textContent = humanSize(file.size);
+    emptyState.hidden = true;
+    filledState.hidden = false;
+    drop.classList.add('has-file');
+  }
+
+  // Клик по кнопке «выбрать» — открывает диалог
+  drop.addEventListener('click', function (e) {
+    if (e.target.closest('#fileRemove')) return;   // не мешаем кнопке удаления
+    input.click();
+  });
+
+  // Выбор файла через диалог
+  input.addEventListener('change', function () {
+    showFile(input.files[0] || null);
+  });
+
+  // Drag-and-drop
+  ['dragenter', 'dragover'].forEach(function (evt) {
+    drop.addEventListener(evt, function (e) {
+      e.preventDefault();
+      drop.classList.add('drag-over');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(function (evt) {
+    drop.addEventListener(evt, function (e) {
+      e.preventDefault();
+      drop.classList.remove('drag-over');
+    });
+  });
+
+  drop.addEventListener('drop', function (e) {
+    e.preventDefault();
+    const files = e.dataTransfer.files;
+    if (!files || !files.length) return;
+
+    // Проверяем расширение
+    const file = files[0];
+    if (!file.name.toLowerCase().endsWith('.docx')) {
+      alert('Поддерживаются только файлы .docx');
+      return;
+    }
+
+    // Кладём файл в input
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+
+    showFile(file);
+  });
+
+  // Кнопка удаления
+  removeBtn.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    input.value = '';
+    showFile(null);
+  });
+})();
+</script>
 {% endblock %}

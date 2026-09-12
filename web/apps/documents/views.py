@@ -582,3 +582,40 @@ class DocxPreviewView(LoginRequiredMixin, View):
                 "warnings": result.messages,
             },
         )
+
+class DocumentPreviewPDFView(LoginRequiredMixin, View):
+    """
+    PDF-предпросмотр готового документа.
+    Генерирует тот же DOCX, что и при скачивании, и конвертирует в PDF.
+    """
+
+    def get(self, request, pk):
+        from apps.documents.pdf_generator import generate_pdf, PDFError
+
+        document = get_object_or_404(
+            Document.objects.select_related("document_type", "template"),
+            pk=pk,
+        )
+
+        try:
+            pdf_buffer = generate_pdf(document)
+        except PDFError as exc:
+            return HttpResponse(
+                f"Предпросмотр недоступен: {exc}",
+                status=503,
+                content_type="text/plain; charset=utf-8",
+            )
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).exception("Document PDF preview failed")
+            return HttpResponse(
+                f"Ошибка предпросмотра: {exc}",
+                status=500,
+                content_type="text/plain; charset=utf-8",
+            )
+
+        response = HttpResponse(pdf_buffer.read(), content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f'inline; filename="document_{document.pk}_preview.pdf"'
+        )
+        return response

@@ -3,97 +3,159 @@
 
 {% block title %}Документ #{{ document.pk }} — Панель{% endblock %}
 
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/dashboard/documents_detail.css' %}">
+{% endblock %}
+
 {% block dashboard_content %}
-<div class="dashboard-home">
+<div class="doc-detail">
 
-  <div class="dashboard-header">
-    <h1>{{ page_title }}</h1>
-    <p class="dashboard-subtitle">{{ page_subtitle }}</p>
-  </div>
+  {# ── Шапка документа ── #}
+  <header class="doc-detail-hero">
 
-  <div class="dashboard-actions">
-    <a href="{% url 'dashboard:documents' %}" class="dashboard-btn">
-      <i class="bi bi-arrow-left"></i> К списку
-    </a>
+    <div class="doc-detail-hero-top">
+      <a href="{% url 'dashboard:documents' %}" class="doc-detail-back">
+        <i class="bi bi-arrow-left"></i> К списку
+      </a>
 
-    <a href="{% url 'documents:preview' document.pk %}" class="dashboard-btn">
-      <i class="bi bi-pencil-square"></i> Открыть в редакторе
-    </a>
+      <div class="doc-detail-badges">
+        <span class="status status-{{ document.status }}">
+          {{ document.get_status_display }}
+        </span>
+        {% if document.ai_provider %}
+          <span class="doc-detail-ai" title="ИИ-провайдер">
+            <i class="bi bi-cpu"></i> {{ document.ai_provider }}
+          </span>
+        {% endif %}
+      </div>
+    </div>
 
-    <a href="{% url 'documents:download' document.pk %}?format=docx"
-       class="dashboard-btn dashboard-btn-primary">
-      <i class="bi bi-file-earmark-word"></i> Скачать DOCX
-    </a>
+    <h1 class="doc-detail-title">
+      {{ document.document_type.name }}
+      <span class="doc-detail-id">#{{ document.pk }}</span>
+    </h1>
 
-    <a href="{% url 'documents:download' document.pk %}?format=pdf"
-       class="dashboard-btn dashboard-btn-primary">
-      <i class="bi bi-file-earmark-pdf"></i> Скачать PDF
-    </a>
+    <p class="doc-detail-subtitle">
+      Шаблон: <strong>{{ document.template.name }}</strong>
+      · Создан {{ document.created_at|date:"d.m.Y в H:i" }}
+      {% if document.updated_at|date:"d.m.Y H:i" != document.created_at|date:"d.m.Y H:i" %}
+        · обновлён {{ document.updated_at|date:"d.m.Y в H:i" }}
+      {% endif %}
+    </p>
 
-    <a href="{% url 'dashboard:document_delete' document.pk %}"
-       class="dashboard-btn danger">
-      <i class="bi bi-trash"></i> Удалить
-    </a>
-  </div>
+    <div class="doc-detail-actions">
+      <a href="{% url 'documents:preview' document.pk %}"
+         class="dashboard-btn dashboard-btn-primary">
+        <i class="bi bi-pencil-square"></i> Редактировать
+      </a>
+      <a href="{% url 'documents:download' document.pk %}?format=docx"
+         class="dashboard-btn">
+        <i class="bi bi-file-earmark-word"></i> DOCX
+      </a>
+      <a href="{% url 'documents:download' document.pk %}?format=pdf"
+         class="dashboard-btn">
+        <i class="bi bi-file-earmark-pdf"></i> PDF
+      </a>
+      <a href="{% url 'dashboard:document_delete' document.pk %}"
+         class="dashboard-btn danger">
+        <i class="bi bi-trash"></i> Удалить
+      </a>
+    </div>
+  </header>
 
-  <dl class="dashboard-meta">
-    <dt>Тип</dt><dd>{{ document.document_type.name }}</dd>
-    <dt>Шаблон</dt><dd>{{ document.template.name }}</dd>
-    <dt>Статус</dt>
-    <dd>
-      <span class="status status-{{ document.status }}">
-        {{ document.get_status_display }}
-      </span>
-    </dd>
-    <dt>Создан</dt><dd>{{ document.created_at|date:"d.m.Y H:i" }}</dd>
-    <dt>Обновлён</dt><dd>{{ document.updated_at|date:"d.m.Y H:i" }}</dd>
-  </dl>
-
+  {# ── Ошибка, если есть ── #}
   {% if document.error_message %}
-    <div class="dashboard-alert danger">
-      <strong>Ошибка обработки:</strong> {{ document.error_message }}
+    <div class="doc-detail-alert doc-detail-alert--danger">
+      <i class="bi bi-exclamation-triangle"></i>
+      <div>
+        <strong>Ошибка обработки</strong>
+        <p>{{ document.error_message }}</p>
+      </div>
     </div>
   {% endif %}
 
-  <section class="dashboard-block">
-    <h2>Исходный черновик</h2>
-    <pre class="dashboard-pre">{{ document.source_text }}</pre>
-  </section>
+  {# ── Реквизиты ── #}
+  <section class="doc-detail-section">
+    <div class="doc-detail-section-head">
+      <h2>Реквизиты</h2>
+      {% if document.missing_fields %}
+        <span class="doc-detail-pill doc-detail-pill--warn">
+          <i class="bi bi-exclamation-circle"></i>
+          Не заполнено: {{ document.missing_fields|length }}
+        </span>
+      {% else %}
+        <span class="doc-detail-pill doc-detail-pill--ok">
+          <i class="bi bi-check-circle"></i> Все заполнены
+        </span>
+      {% endif %}
+    </div>
 
-  <section class="dashboard-block">
-    <h2>Обработанный текст</h2>
-    <pre class="dashboard-pre">{{ document.processed_text|default:"—" }}</pre>
-  </section>
-
-  <section class="dashboard-block">
-    <h2>Реквизиты</h2>
     {% with fields=document.get_labelled_fields %}
       {% if fields %}
-        <ul class="dashboard-list">
+        <div class="doc-fields-grid">
           {% for f in fields %}
-            <li>
-              <strong>{{ f.label }}:</strong>
-              {% if f.value %}
-                {{ f.value }}
-              {% else %}
-                <span class="dashboard-muted">[не заполнено]</span>
-              {% endif %}
-            </li>
+            <div class="doc-field-card {% if f.is_missing %}is-missing{% endif %}">
+              <div class="doc-field-label">{{ f.label }}</div>
+              <div class="doc-field-value">
+                {% if f.value %}
+                  {{ f.value }}
+                {% else %}
+                  <span class="doc-field-empty">— не заполнено —</span>
+                {% endif %}
+              </div>
+            </div>
           {% endfor %}
-        </ul>
+        </div>
       {% else %}
-        <p class="dashboard-muted">Реквизиты не заполнены.</p>
+        <p class="doc-detail-muted">Реквизиты не заполнены.</p>
       {% endif %}
     {% endwith %}
+  </section>
 
-    {% if document.missing_fields %}
-      <p class="dashboard-alert warning">
-        Недостающие реквизиты:
-        {% for f in document.get_labelled_fields %}
-          {% if f.is_missing %}{{ f.label }}{% if not forloop.last %}, {% endif %}{% endif %}
-        {% endfor %}
-      </p>
-    {% endif %}
+  {# ── Тексты ── #}
+  <section class="doc-detail-section">
+    <div class="doc-detail-section-head">
+      <h2>Тексты</h2>
+    </div>
+
+    <div class="doc-texts-grid">
+      <div class="doc-text-card">
+        <div class="doc-text-card-head">
+          <i class="bi bi-pencil"></i> Исходный черновик
+        </div>
+        <pre class="doc-text-body">{{ document.source_text }}</pre>
+      </div>
+
+      <div class="doc-text-card doc-text-card--accent">
+        <div class="doc-text-card-head">
+          <i class="bi bi-stars"></i> Обработанный текст
+        </div>
+        {% if document.processed_text %}
+          <pre class="doc-text-body">{{ document.processed_text }}</pre>
+        {% else %}
+          <p class="doc-detail-muted">— пусто —</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  {# ── Предпросмотр документа ── #}
+  <section class="doc-detail-section">
+    <div class="doc-detail-section-head">
+      <h2>Предпросмотр</h2>
+      <span class="doc-detail-pill">
+        <i class="bi bi-file-earmark-pdf"></i> PDF
+      </span>
+    </div>
+
+    <div class="doc-preview-wrap">
+      <iframe
+          src="{% url 'documents:preview_pdf' document.pk %}"
+          class="doc-preview-frame"
+          loading="lazy">
+      </iframe>
+    </div>
   </section>
 
 </div>

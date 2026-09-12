@@ -1,100 +1,417 @@
 {% extends "dashboard/base.html" %}
+{% load static %}
 
 {% block title %}{{ template.name }} — Панель{% endblock %}
 
-{% block dashboard_content %}
-<div class="dashboard-home">
-  <div class="dashboard-header">
-    <h1>{{ template.name }}</h1>
-    <p class="dashboard-subtitle">{{ template.description }}</p>
-  </div>
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/dashboard/template_detail.css' %}">
+{% endblock %}
 
+{% block dashboard_content %}
+<div class="tpl-detail">
+
+  {# ── Хиро ── #}
+  <header class="tpl-hero">
+
+    <div class="tpl-hero-top">
+      <a href="{% url 'dashboard:templates' %}" class="tpl-back">
+        <i class="bi bi-arrow-left"></i> К списку
+      </a>
+
+      <div class="tpl-badges">
+        {% if template.kind == "system" %}
+          <span class="tpl-badge tpl-badge--system">
+            <i class="bi bi-shield-check"></i> Системный
+          </span>
+        {% else %}
+          <span class="tpl-badge tpl-badge--user">
+            <i class="bi bi-person"></i> Мой
+          </span>
+        {% endif %}
+
+        <span class="status status-{{ template.parse_status }}">
+          {{ template.get_parse_status_display }}
+        </span>
+      </div>
+    </div>
+
+    <h1 class="tpl-title">{{ template.name }}</h1>
+
+    {% if template.description %}
+      <p class="tpl-subtitle">{{ template.description }}</p>
+    {% endif %}
+
+    <div class="tpl-meta">
+      <span class="tpl-meta-item">
+        <i class="bi bi-list-check"></i>
+        {{ template.placeholders|length }} реквизит{{ template.placeholders|length|pluralize:"ов,а,ов" }}
+      </span>
+      <span class="tpl-meta-item">
+        <i class="bi bi-clock"></i>
+        Создан {{ template.created_at|date:"d.m.Y" }}
+      </span>
+      {% if template.docx_template %}
+        <span class="tpl-meta-item">
+          <i class="bi bi-file-earmark-word"></i> docx
+        </span>
+      {% endif %}
+    </div>
+
+    <div class="tpl-actions">
+      {% if template.docx_template %}
+        <a href="{% url 'dashboard:template_preview_pdf' template.pk %}"
+           target="_blank"
+           class="dashboard-btn">
+          <i class="bi bi-eye"></i> Открыть в новой вкладке
+        </a>
+        <a href="{{ template.docx_template.url }}"
+           class="dashboard-btn">
+          <i class="bi bi-download"></i> Скачать .docx
+        </a>
+      {% endif %}
+
+      {% if can_edit %}
+        <form method="post" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" name="action" value="reparse"
+                  class="dashboard-btn">
+            <i class="bi bi-arrow-clockwise"></i> Переразобрать
+          </button>
+        </form>
+
+        <button type="button" class="dashboard-btn danger"
+                id="openDeleteModal">
+          <i class="bi bi-trash"></i> Удалить
+        </button>
+      {% endif %}
+    </div>
+  </header>
+
+  {# ── Ошибка парсинга ── #}
   {% if template.parse_error %}
-  <div class="dashboard-alert warning">
-    <strong>Парсинг:</strong> {{ template.parse_error }}
-  </div>
+    <div class="tpl-alert tpl-alert--warn">
+      <i class="bi bi-exclamation-triangle"></i>
+      <div>
+        <strong>Парсинг шаблона</strong>
+        <p>{{ template.parse_error }}</p>
+      </div>
+    </div>
   {% endif %}
 
-  <div class="dashboard-actions">
-    <a href="{% url 'dashboard:templates' %}" class="dashboard-btn">← К списку</a>
+  {# ── Плейсхолдеры ── #}
+  <section class="tpl-section">
+    <div class="tpl-section-head">
+      <h2>Плейсхолдеры</h2>
 
-    {% if template.docx_template %}
-    <a href="{{ template.docx_template.url }}" class="dashboard-btn">
-      <i class="bi bi-download"></i> Скачать .docx
-    </a>
-    {% endif %}
+      <div class="tpl-section-tools">
+        {% if template.placeholders %}
+          <span class="tpl-pill tpl-pill--ok">
+            <i class="bi bi-check-circle"></i>
+            {{ template.placeholders|length }}
+          </span>
+        {% else %}
+          <span class="tpl-pill tpl-pill--warn">
+            <i class="bi bi-exclamation-circle"></i> Не найдено
+          </span>
+        {% endif %}
+
+        {# Переключатель вида: таблица / карточки #}
+        {% if template.placeholders %}
+          <div class="tpl-view-toggle" role="group" aria-label="Режим отображения">
+            <button type="button"
+                    class="tpl-view-btn is-active"
+                    data-view="table"
+                    title="Таблица"
+                    aria-label="Таблица">
+              <i class="bi bi-list-ul"></i>
+            </button>
+            <button type="button"
+                    class="tpl-view-btn"
+                    data-view="cards"
+                    title="Карточки"
+                    aria-label="Карточки">
+              <i class="bi bi-grid-3x3-gap"></i>
+            </button>
+          </div>
+        {% endif %}
+      </div>
+    </div>
 
     {% if can_edit %}
-    <form method="post" style="display:inline;">
-      {% csrf_token %}
-      <button type="submit" name="action" value="reparse" class="dashboard-btn">
-        <i class="bi bi-arrow-clockwise"></i> Переразобрать ИИ
-      </button>
-    </form>
+      <form method="post" class="tpl-form">
+        {% csrf_token %}
 
-    <form method="post" style="display:inline;"
-          onsubmit="return confirm('Удалить шаблон?');">
-      {% csrf_token %}
-      <button type="submit" name="action" value="delete" class="dashboard-btn danger">
-        <i class="bi bi-trash"></i> Удалить
-      </button>
-    </form>
+        <div class="tpl-ph-view" id="phView" data-view="table">
+
+          {# ── Табличный вид ── #}
+          <div class="tpl-ph-table-wrap">
+            <table class="dashboard-table tpl-ph-table">
+              <thead>
+                <tr>
+                  <th>Плейсхолдер</th>
+                  <th>Код</th>
+                  <th>Название реквизита</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in template.placeholders %}
+                  <tr>
+                    <td><code class="tpl-ph-code">{{ p.placeholder }}</code></td>
+                    <td><span class="tpl-ph-code-small">{{ p.code }}</span></td>
+                    <td>
+                      <input type="text"
+                             name="label_{{ forloop.counter0 }}"
+                             value="{{ p.label }}"
+                             class="tpl-input">
+                      <input type="hidden"
+                             name="code_{{ forloop.counter0 }}"
+                             value="{{ p.code }}">
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="3" class="tpl-muted">
+                      В шаблоне нет плейсхолдеров.
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          {# ── Карточный вид ── #}
+          <div class="tpl-ph-grid">
+            {% for p in template.placeholders %}
+              <div class="tpl-ph-card">
+                <div class="tpl-ph-card-head">
+                  <code class="tpl-ph-code">{{ p.placeholder }}</code>
+                  <span class="tpl-ph-code-small">{{ p.code }}</span>
+                </div>
+
+                <label class="tpl-ph-label">
+                  <span>Название реквизита</span>
+                  <input type="text"
+                         name="label_{{ forloop.counter0 }}"
+                         value="{{ p.label }}"
+                         class="tpl-input">
+                </label>
+
+                <input type="hidden"
+                       name="code_{{ forloop.counter0 }}"
+                       value="{{ p.code }}">
+              </div>
+            {% empty %}
+              <p class="tpl-muted">
+                В шаблоне нет плейсхолдеров. Добавьте их в файл
+                <code>.docx</code> вида <code>[Кому]</code>,
+                <code>[Дата]</code> и перезагрузите шаблон.
+              </p>
+            {% endfor %}
+          </div>
+
+        </div>
+
+        {% if template.placeholders %}
+          <div class="tpl-form-actions">
+            <button type="submit" name="action" value="update_placeholders"
+                    class="dashboard-btn dashboard-btn-primary">
+              <i class="bi bi-save"></i> Сохранить изменения
+            </button>
+          </div>
+        {% endif %}
+      </form>
+    {% else %}
+      {# Просмотр без редактирования — тот же переключатель #}
+      <div class="tpl-ph-view" id="phViewReadonly" data-view="table">
+
+        <div class="tpl-ph-table-wrap">
+          <table class="dashboard-table tpl-ph-table">
+            <thead>
+              <tr>
+                <th>Плейсхолдер</th>
+                <th>Код</th>
+                <th>Название реквизита</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in template.placeholders %}
+                <tr>
+                  <td><code class="tpl-ph-code">{{ p.placeholder }}</code></td>
+                  <td><span class="tpl-ph-code-small">{{ p.code }}</span></td>
+                  <td>{{ p.label }}</td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="3" class="tpl-muted">Плейсхолдеры не найдены.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="tpl-ph-grid">
+          {% for p in template.placeholders %}
+            <div class="tpl-ph-card tpl-ph-card--readonly">
+              <div class="tpl-ph-card-head">
+                <code class="tpl-ph-code">{{ p.placeholder }}</code>
+                <span class="tpl-ph-code-small">{{ p.code }}</span>
+              </div>
+              <div class="tpl-ph-label-readonly">{{ p.label }}</div>
+            </div>
+          {% endfor %}
+        </div>
+
+      </div>
     {% endif %}
-  </div>
+  </section>
 
-  <h2>Реквизиты в шаблоне ({{ template.placeholders|length }})</h2>
-
-  {% if can_edit %}
-  <form method="post">
-    {% csrf_token %}
-    <table class="dashboard-table">
-      <thead>
-      <tr>
-        <th>Плейсхолдер</th>
-        <th>Название реквизита</th>
-      </tr>
-      </thead>
-      <tbody>
-      {% for p in template.placeholders %}
-      <tr>
-        <td><code>{{ p.placeholder }}</code></td>
-        <td>
-          <input type="text"
-                 name="label_{{ forloop.counter0 }}"
-                 value="{{ p.label }}"
-                 style="width:100%;">
-          <input type="hidden" name="code_{{ forloop.counter0 }}"
-                 value="{{ p.code }}">
-        </td>
-      </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-
-    <div class="dashboard-actions" style="margin-top: 12px;">
-      <button type="submit" name="action" value="update_placeholders"
-              class="dashboard-btn dashboard-btn-primary">
-        <i class="bi bi-save"></i> Сохранить
-      </button>
+  {# ── Предпросмотр ── #}
+{% if template.docx_template %}
+  <section class="tpl-section">
+    <div class="tpl-section-head">
+      <h2>Предпросмотр</h2>
+      <span class="tpl-pill">
+        <i class="bi bi-file-earmark-pdf"></i> PDF
+      </span>
     </div>
-  </form>
-  {% else %}
-  <table class="dashboard-table">
-    <thead>
-    <tr>
-      <th>Плейсхолдер</th>
-      <th>Название реквизита</th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for p in template.placeholders %}
-    <tr>
-      <td><code>{{ p.placeholder }}</code></td>
-      <td>{{ p.label }}</td>
-    </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% endif %}
+
+    <div class="tpl-preview-wrap">
+      <iframe
+          src="{% url 'dashboard:template_preview_pdf' template.pk %}"
+          class="tpl-preview-frame"
+          loading="lazy">
+      </iframe>
+    </div>
+  </section>
+{% endif %}
+
 </div>
+
+{# ── Модальное окно подтверждения удаления ── #}
+{% if can_edit %}
+<div class="modal-backdrop" id="deleteModal">
+  <div class="doc-modal" role="dialog" aria-modal="true"
+       aria-labelledby="deleteModalTitle">
+    <div class="doc-modal-header">
+      <h3 id="deleteModalTitle">Удалить шаблон?</h3>
+    </div>
+
+    <div class="doc-modal-body">
+      <p>
+        Вы собираетесь удалить шаблон
+        <strong>«{{ template.name }}»</strong>.
+      </p>
+      <p>
+        Это действие нельзя отменить. Все плейсхолдеры, настроенные для
+        этого шаблона, будут потеряны.
+      </p>
+    </div>
+
+    <div class="doc-modal-footer">
+      <button type="button" class="dashboard-btn" id="cancelDelete">
+        Отмена
+      </button>
+
+      <form method="post" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" name="action" value="delete"
+                class="dashboard-btn danger">
+          <i class="bi bi-trash"></i> Удалить
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ── Модалка удаления ── */
+  (function () {
+    const openBtn = document.getElementById('openDeleteModal');
+    const modal = document.getElementById('deleteModal');
+    const cancelBtn = document.getElementById('cancelDelete');
+
+    if (!openBtn || !modal || !cancelBtn) return;
+
+    function openModal() {
+      modal.classList.add('is-open');
+      document.body.classList.add('modal-open');
+    }
+
+    function closeModal() {
+      modal.classList.remove('is-open');
+      document.body.classList.remove('modal-open');
+    }
+
+    openBtn.addEventListener('click', openModal);
+    cancelBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) closeModal();
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+        closeModal();
+      }
+    });
+  })();
+</script>
+{% endif %}
+
+<script>
+  /* ── Переключатель «таблица / карточки» ── */
+  (function () {
+    const STORAGE_KEY = 'tplPlaceholdersView';
+    const viewRoot = document.getElementById('phView')
+                  || document.getElementById('phViewReadonly');
+    const toggleBtns = document.querySelectorAll('.tpl-view-btn');
+
+    if (!viewRoot || !toggleBtns.length) return;
+
+    function setView(mode) {
+      viewRoot.dataset.view = mode;
+      toggleBtns.forEach(function (btn) {
+        btn.classList.toggle('is-active', btn.dataset.view === mode);
+      });
+      try { localStorage.setItem(STORAGE_KEY, mode); } catch (e) {}
+    }
+
+    let saved = 'table';
+    try { saved = localStorage.getItem(STORAGE_KEY) || 'table'; } catch (e) {}
+    setView(saved);
+
+    toggleBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        setView(btn.dataset.view);
+      });
+    });
+  })();
+
+  /* ── Показать / скрыть предпросмотр ── */
+  (function () {
+    const btn = document.getElementById('toggleTemplatePreview');
+    const wrap = document.getElementById('templatePreviewWrap');
+    if (!btn || !wrap) return;
+
+    const label = btn.querySelector('span');
+    const icon = btn.querySelector('i');
+
+    function updateLabel() {
+      const isOpen = !wrap.hidden;
+      if (label) label.textContent = isOpen
+        ? 'Скрыть предпросмотр'
+        : 'Показать предпросмотр';
+      if (icon) icon.className = isOpen ? 'bi bi-eye-slash' : 'bi bi-eye';
+      btn.setAttribute('aria-expanded', String(isOpen));
+    }
+
+    btn.addEventListener('click', function () {
+      wrap.hidden = !wrap.hidden;
+      updateLabel();
+    });
+
+    updateLabel();
+  })();
+</script>
 {% endblock %}

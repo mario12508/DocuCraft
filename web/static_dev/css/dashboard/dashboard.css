@@ -940,3 +940,238 @@
   background: #4a3f1a;
   color: #ffe082;
 }
+
+/* =====================================================================
+   Кастомная загрузка файла
+   ===================================================================== */
+
+.file-drop {
+  display: block;
+  position: relative;
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+  padding: 28px 20px;
+  background: var(--bg-sidebar);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  text-align: center;
+}
+
+.file-drop:hover {
+  border-color: var(--text-muted);
+  background: var(--bg-hover);
+}
+
+.file-drop.drag-over {
+  border-color: #1565c0;
+  background: rgba(21, 101, 192, 0.06);
+}
+
+.file-drop.has-file {
+  border-style: solid;
+  border-color: var(--border-color);
+  padding: 16px 20px;
+  text-align: left;
+}
+
+/* === Пустое состояние === */
+.file-drop-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-drop-icon {
+  font-size: 40px;
+  color: var(--text-muted);
+  transition: color 0.15s ease;
+}
+
+.file-drop:hover .file-drop-icon,
+.file-drop.drag-over .file-drop-icon {
+  color: #1565c0;
+}
+
+.file-drop-title {
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.file-drop-link {
+  color: #1565c0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.file-drop-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.file-drop-hint code {
+  background: var(--bg-hover);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* === Состояние: файл выбран === */
+.file-drop-filled {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.file-drop-filled-icon {
+  font-size: 32px;
+  color: #1565c0;
+  flex-shrink: 0;
+}
+
+.file-drop-filled-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-drop-filled-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-drop-filled-size {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.file-drop-remove {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.file-drop-remove:hover {
+  background: rgba(198, 40, 40, 0.1);
+  color: #c62828;
+}
+
+/* === Тёмная тема === */
+[data-theme="dark"] .file-drop.drag-over {
+  background: rgba(21, 101, 192, 0.15);
+}
+
+[data-theme="dark"] .file-drop-remove:hover {
+  background: rgba(198, 40, 40, 0.25);
+}
+
+/* =====================================================================
+   Модальное окно подтверждения (свой префикс — не конфликтует с Bootstrap)
+   ===================================================================== */
+
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.modal-backdrop.is-open {
+  display: flex;
+  animation: modalFadeIn 0.15s ease;
+}
+
+.doc-modal {
+  background: var(--bg-sidebar);
+  color: var(--text-primary);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.doc-modal-header {
+  padding: 20px 24px 0;
+}
+
+.doc-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.doc-modal-body {
+  padding: 12px 24px 20px;
+}
+
+.doc-modal-body p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.doc-modal-body p:last-child {
+  margin-bottom: 0;
+}
+
+.doc-modal-warning {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #fff8e1;
+  color: #8d6e00 !important;
+  font-size: 13px !important;
+}
+
+[data-theme="dark"] .doc-modal-warning {
+  background: #4a3f1a;
+  color: #ffe082 !important;
+}
+
+.doc-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-content);
+}
+
+[data-theme="dark"] .doc-modal-footer {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
