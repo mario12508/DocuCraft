@@ -119,7 +119,12 @@ class AIResult:
 
 
 def _clean_json(raw: str) -> dict:
-    """Извлекает JSON из ответа, даже если модель добавила markdown."""
+    """
+    Извлекает JSON из ответа модели. Устойчив к:
+    - markdown-обёрткам ```json ... ```
+    - вводному тексту до/после JSON
+    - неэкранированным control-символам (переносы строк внутри строк)
+    """
     if not raw:
         raise ValueError("Пустой ответ модели")
 
@@ -127,9 +132,25 @@ def _clean_json(raw: str) -> dict:
     cleaned = cleaned.rstrip("`").strip()
 
     match = re.search(r"\{.*\}", cleaned, re.DOTALL)
-    if match:
-        return json.loads(match.group(0))
-    return json.loads(cleaned)
+    candidate = match.group(0) if match else cleaned
+
+    # Строгий парсинг
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        pass
+
+    # Мягкий парсинг — разрешает control-символы внутри строк
+    try:
+        return json.loads(candidate, strict=False)
+    except json.JSONDecodeError:
+        pass
+
+    # Последний шанс: заменяем control-символы на пробелы
+    sanitized = re.sub(
+        r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", candidate
+    )
+    return json.loads(sanitized, strict=False)
 
 
 def _clean_value(v):
