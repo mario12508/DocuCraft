@@ -22,3 +22,5 @@ docx==0.2.4
 python-docx==1.2.0
 openai==3.13.0
 mammoth==1.12.1
+spire-doc==14.8.1
+pymupdf==1.28.2

@@ -58,36 +58,38 @@
     </div>
   </form>
 
+  {% if draft_categories %}
   <details class="doc-demo" open>
-  <summary>Демонстрационные черновики</summary>
-  <p>
-    Выберите один из готовых черновиков — он подставится в поле выше.
-    Тексты специально содержат опечатки, разговорные обороты
-    и незаполненные реквизиты, чтобы проверить сценарии 2, 3, 4.
-  </p>
+    <summary>Демонстрационные черновики</summary>
+    <p>
+      Выберите готовый черновик — он подставится в поле выше.
+      Черновики разного качества: эталонные, с пропущенными реквизитами
+      и с разговорным стилем — чтобы проверить сценарии 2, 3, 4 из ТЗ.
+    </p>
 
-  <div class="doc-demo-list">
-    <button type="button" class="doc-demo-card" data-demo="sluzhebnaya">
-      <strong>Служебная записка</strong>
-      <em>Просьба о выделении отпуска</em>
-    </button>
+    <div class="doc-drafts">
+      {% for cat in draft_categories %}
+        <section class="doc-draft-group">
+          <header class="doc-draft-group-head">
+            <i class="bi {{ cat.icon }}"></i>
+            <span>{{ cat.title }}</span>
+          </header>
 
-    <button type="button" class="doc-demo-card" data-demo="dokladnaya">
-      <strong>Докладная записка</strong>
-      <em>О срыве сроков поставки</em>
-    </button>
-
-    <button type="button" class="doc-demo-card" data-demo="spravka">
-      <strong>Информационная справка</strong>
-      <em>Итоги работы отдела за квартал</em>
-    </button>
-
-    <button type="button" class="doc-demo-card" data-demo="pismo">
-      <strong>Письмо</strong>
-      <em>Приглашение на конференцию</em>
-    </button>
-  </div>
-</details>
+          <div class="doc-draft-items">
+            {% for item in cat.items %}
+              <button type="button"
+                class="doc-draft-item doc-draft-item--{{ item.quality }}"
+                data-draft-text="{{ item.text }}">
+                <span class="doc-draft-quality"></span>
+                <span class="doc-draft-label">{{ item.label }}</span>
+              </button>
+            {% endfor %}
+          </div>
+        </section>
+      {% endfor %}
+    </div>
+  </details>
+  {% endif %}
 
 </div>
 
@@ -95,32 +97,6 @@
 (function () {
   const textarea = document.getElementById('{{ form.source_text.id_for_label }}');
   const counter = document.getElementById('charCount');
-
-  const DEMO_TEXTS = {
-    sluzhebnaya:
-`Прошу предоставить мне ежегодный оплачиваемый отпуск с 10.05.2026 года сроком на 14 календарных дней. Причина — семейные обстоятельства, ну и вообще давно не отдыхал. За время отсутствия мои обязанности может исполнять Петров П.П., он в курсе.
-
-С уважением, Иванов И.И.`,
-
-    dokladnaya:
-`Докладываю, что поставка комплектующих от ООО «Ромашка» по договору №45-2026 от 12.02.2026 сорвана. Планировали получить ещё 3 марта, но машина так и не пришла. Поставщик кормит завтраками уже вторую неделю, ссылается на проблемы на складе. Из-за этого мы рискуем не сдать проект заказчику в срок до 30.04.2026 и потерять 1 200 000 рублей неустойки.
-
-Прошу принять меры и подключить юридический отдел.`,
-
-    spravka:
-`По итогам работы отдела продаж за 1 квартал 2026 года докладываю следующее. План выполнен на 112%, выручка составила 48 700 000 рублей, что на 9% выше аналогичного периода прошлого года. Ключевыми клиентами квартала стали АО «Вектор», ООО «Северная звезда» и ИП Смирнов А.В.
-
-Основные проблемы: высокая текучесть среди новых менеджеров (трое уволились за квартал), задержки с отгрузками из-за перебоев у логистического партнёра. Предлагаю рассмотреть расширение штата и смену логистического оператора.`,
-
-    pismo:
-`Уважаемый Александр Петрович!
-
-Приглашаем Вас и Ваших коллег принять участие в ежегодной конференции «Цифровая трансформация промышленности — 2026», которая пройдёт 15–17 июня 2026 года в Москве, в конгресс-центре «Технополис».
-
-В программе — пленарные сессии, мастер-классы и круглые столы по темам: промышленный ИИ, цифровые двойники, кибербезопасность. Участие бесплатное, но количество мест ограничено. Регистрация — до 1 июня 2026 года.
-
-Просим подтвердить участие письмом на адрес conf@techpolis.ru.`
-  };
 
   function updateCount() {
     if (textarea && counter) counter.textContent = textarea.value.length;
@@ -131,12 +107,13 @@
     updateCount();
   }
 
-  document.querySelectorAll('.doc-demo-card').forEach(function (btn) {
+  document.querySelectorAll('.doc-draft-item').forEach(function (btn) {
     btn.addEventListener('click', function () {
       if (!textarea) return;
-      const key = btn.dataset.demo;
-      const text = DEMO_TEXTS[key];
+      const text = btn.dataset.draftText;
       if (!text) return;
+
+      // Разэскейпливаем \n, которые Django оставил в атрибуте
       textarea.value = text;
       updateCount();
       textarea.focus();

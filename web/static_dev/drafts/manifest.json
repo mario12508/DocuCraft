@@ -1,0 +1,48 @@
+{
+  "categories": [
+    {
+      "code": "sluzhebnaya",
+      "title": "Служебная записка",
+      "icon": "bi-envelope-paper",
+      "items": [
+        {"file": "sluzhebnaya_1.txt", "label": "Полный набор реквизитов", "quality": "good"},
+        {"file": "sluzhebnaya_2.txt", "label": "Разговорный стиль, опечатки", "quality": "bad"},
+        {"file": "sluzhebnaya_3.txt", "label": "Без адресата", "quality": "medium"},
+        {"file": "sluzhebnaya_4.txt", "label": "Свободная форма", "quality": "medium"}
+      ]
+    },
+    {
+      "code": "dokladnaya",
+      "title": "Докладная записка",
+      "icon": "bi-file-earmark-text",
+      "items": [
+        {"file": "dokladnaya_1.txt", "label": "Полный набор реквизитов", "quality": "good"},
+        {"file": "dokladnaya_2.txt", "label": "Разговорный стиль, опечатки", "quality": "bad"},
+        {"file": "dokladnaya_3.txt", "label": "Без адресата и номера", "quality": "medium"},
+        {"file": "dokladnaya_4.txt", "label": "Свободная форма", "quality": "medium"}
+      ]
+    },
+    {
+      "code": "spravka",
+      "title": "Информационная справка",
+      "icon": "bi-info-circle",
+      "items": [
+        {"file": "spravka_1.txt", "label": "Полный набор реквизитов", "quality": "good"},
+        {"file": "spravka_2.txt", "label": "Разговорный стиль", "quality": "bad"},
+        {"file": "spravka_3.txt", "label": "Без даты", "quality": "medium"},
+        {"file": "spravka_4.txt", "label": "Свободная форма", "quality": "medium"}
+      ]
+    },
+    {
+      "code": "pismo",
+      "title": "Письмо",
+      "icon": "bi-send",
+      "items": [
+        {"file": "pismo_1.txt", "label": "Полный набор реквизитов", "quality": "good"},
+        {"file": "pismo_2.txt", "label": "Разговорный стиль, опечатки", "quality": "bad"},
+        {"file": "pismo_3.txt", "label": "Без адресата и номера", "quality": "medium"},
+        {"file": "pismo_4.txt", "label": "Свободная форма", "quality": "medium"}
+      ]
+    }
+  ]
+}

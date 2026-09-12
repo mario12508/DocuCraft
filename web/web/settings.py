@@ -298,6 +298,12 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@resend.dev")
 
 AI_PROVIDERS = [
     {
+        "name": "gigachat",
+        "api_key": os.getenv("GIGACHAT_AUTH_KEY", ""),
+        "model": "GigaChat-2",
+        "timeout": 30,
+    },
+    {
         "name": "groq_primary",
         "base_url": "https://api.groq.com/openai/v1",
         "api_key": os.getenv("GROQ_API_KEY", ""),
@@ -322,18 +328,50 @@ AI_PROVIDERS = [
         "supports_json": True,
     },
     {
-        "name": "openrouter_nemotron",
+        "name": "openrouter_gpt_oss_20b",
         "base_url": "https://openrouter.ai/api/v1",
         "api_key": os.getenv("OPENROUTER_API_KEY", ""),
-        "model": "nvidia/nemotron-3.5-lightning:free",
+        "model": "openai/gpt-oss-20b:free",
         "timeout": 25,
         "supports_json": True,
     },
     {
-        "name": "openrouter_gpt_oss",
+        "name": "openrouter_nemotron_super",
         "base_url": "https://openrouter.ai/api/v1",
         "api_key": os.getenv("OPENROUTER_API_KEY", ""),
-        "model": "openai/gpt-oss-120b:free",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free",
+        "timeout": 25,
+        "supports_json": True,
+    },
+    {
+        "name": "openrouter_gemma_26b",
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key": os.getenv("OPENROUTER_API_KEY", ""),
+        "model": "google/gemma-4-26b-a4b-it:free",
+        "timeout": 25,
+        "supports_json": True,
+    },
+    {
+        "name": "openrouter_gemma_31b",
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key": os.getenv("OPENROUTER_API_KEY", ""),
+        "model": "google/gemma-4-31b-it:free",
+        "timeout": 25,
+        "supports_json": True,
+    },
+    {
+        "name": "openrouter_ling_flash",
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key": os.getenv("OPENROUTER_API_KEY", ""),
+        "model": "inclusionai/ling-3.0-flash:free",
+        "timeout": 25,
+        "supports_json": True,
+    },
+    {
+        "name": "openrouter_nemotron_nano",
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key": os.getenv("OPENROUTER_API_KEY", ""),
+        "model": "nvidia/nemotron-3-nano-30b-a3b:free",
         "timeout": 25,
         "supports_json": True,
     },
@@ -344,8 +382,5 @@ AI_TOTAL_TIMEOUT = 45
 SOFFICE_PATH = None
 
 DOCX_TEMPLATES_DIR = BASE_DIR / "static_dev" / "templates"
-<<<<<<< HEAD
 
 X_FRAME_OPTIONS = "SAMEORIGIN"
-=======
->>>>>>> b460f621d9d16ff7bb8d59ef495225a8812c8be7

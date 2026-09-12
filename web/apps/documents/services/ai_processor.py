@@ -4,12 +4,23 @@ import json
 import logging
 import re
 import time
+import uuid
 from dataclasses import dataclass, field
 
+import requests
+import urllib3
 from django.conf import settings
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+# ── GigaChat ─────────────────────────────────────────────────────────
+GIGACHAT_AUTH_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
+GIGACHAT_API_URL = "https://api.giga.chat/v1/chat/completions"
+GIGACHAT_SCOPE = "GIGACHAT_API_PERS"
 
 
 SYSTEM_PROMPT = """Ты — эксперт по официально-деловому стилю русского языка.
@@ -25,11 +36,16 @@ SYSTEM_PROMPT = """Ты — эксперт по официально-делов�
    сформулировать из содержания (например, «О предоставлении ежегодного
    оплачиваемого отпуска»), даже если в черновике она не названа дословно.
    Тема — краткое изложение сути, а не новый факт.
-5. Если черновик содержит номер документа в формате «47-СЗ», «12-ДЗ»
-   и т.п. — перенеси его в "number" без изменений.
-6. "body" — это исправленный основной текст БЕЗ шапки, без блока
+5. Поле "date" — ДАТА ДОКУМЕНТА, то есть дата, с которой документ исходит.
+   Даты событий, договоров, поставок, проверок — НЕ являются датой документа.
+   Если явной даты документа нет — верни null. НЕ переноси в "date" даты
+   из тела документа.
+6. Поле "number" — регистрационный номер документа. Если в черновике есть
+   номер формата «47-СЗ», «12-ДЗ», «88-П» — перенеси его сюда без изменений.
+   Если номера нет — верни null.
+7. "body" — это исправленный основной текст БЕЗ шапки, без блока
    реквизитов и без подписи. Только содержательная часть.
-7. Даты приводи к формату ДД.ММ.ГГГГ.
+8. Даты в тексте приводи к формату ДД.ММ.ГГГГ.
 
 Формат ответа JSON:
 {
@@ -108,17 +124,49 @@ def _clean_json(raw: str) -> dict:
     return json.loads(cleaned)
 
 
+def _clean_value(v):
+    """
+    Нормализует значение, пришедшее от модели.
+    Возвращает строку или None — если значение «пустое».
+    """
+    if v is None:
+        return None
+    if isinstance(v, str):
+        s = v.strip()
+        if not s:
+            return None
+        if s.lower() in ("null", "none", "нет данных", "нет", "-", "—"):
+            return None
+        return s
+    if isinstance(v, (int, float, bool)):
+        return str(v)
+    return None
+
+
+def _filter_fields(data: dict) -> dict:
+    """Оставляет только непустые поля, кроме body."""
+    result = {}
+    for k, v in data.items():
+        if k == "body":
+            continue
+        cleaned = _clean_value(v)
+        if cleaned is not None:
+            result[k] = cleaned
+    return result
+
+
+# =====================================================================
+# OpenAI-совместимые провайдеры (Groq, Gemini, OpenRouter)
+# =====================================================================
 def _call_provider(provider: dict, source_text: str, doc_type: str) -> AIResult:
     if not provider.get("api_key"):
         raise ValueError(f"Не задан ключ для {provider['name']}")
 
-    client_kwargs = {
-        "base_url": provider["base_url"],
-        "api_key": provider["api_key"],
-        "timeout": provider.get("timeout", 15),
-    }
-
-    client = OpenAI(**client_kwargs)
+    client = OpenAI(
+        base_url=provider["base_url"],
+        api_key=provider["api_key"],
+        timeout=provider.get("timeout", 15),
+    )
 
     kwargs = {
         "model": provider["model"],
@@ -140,21 +188,89 @@ def _call_provider(provider: dict, source_text: str, doc_type: str) -> AIResult:
     data = _clean_json(raw)
 
     return AIResult(
-        processed_text=data.get("body") or source_text,
-        extracted_fields={
-            k: v for k, v in data.items()
-            if k != "body" and v is not None
-        },
+        processed_text=_clean_value(data.get("body")) or source_text,
+        extracted_fields=_filter_fields(data),
         provider=provider["name"],
         model=provider["model"],
     )
 
 
+# =====================================================================
+# GigaChat (Сбер) — отдельная ветка, не через OpenAI SDK
+# =====================================================================
+def _get_gigachat_token(auth_key: str) -> str:
+    """Обменивает Authorization key на access_token GigaChat."""
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json",
+        "RqUID": str(uuid.uuid4()),
+        "Authorization": f"Basic {auth_key}",
+    }
+    data = {"scope": GIGACHAT_SCOPE}
+    resp = requests.post(
+        GIGACHAT_AUTH_URL,
+        headers=headers,
+        data=data,
+        verify=False,
+        timeout=15,
+    )
+    if not resp.ok:
+        logger.error(
+            "GigaChat OAuth failed: status=%s body=%s",
+            resp.status_code, resp.text,
+        )
+        raise ValueError(f"GigaChat auth {resp.status_code}: {resp.text}")
+    return resp.json()["access_token"]
+
+
+def _call_gigachat(provider: dict, source_text: str, doc_type: str) -> AIResult:
+    """Отдельная ветка для GigaChat."""
+    auth_key = provider.get("api_key")
+    if not auth_key:
+        raise ValueError("Не задан ключ для GigaChat")
+
+    token = _get_gigachat_token(auth_key)
+    model = provider.get("model", "GigaChat-2")
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": (
+                f"Тип документа: {doc_type}\n"
+                f"Черновик: {source_text}"
+            )},
+        ],
+        "temperature": 0.1,
+    }
+
+    resp = requests.post(
+        GIGACHAT_API_URL,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}",
+        },
+        json=payload,
+        verify=False,
+        timeout=provider.get("timeout", 30),
+    )
+    resp.raise_for_status()
+
+    raw = resp.json()["choices"][0]["message"]["content"]
+    data = _clean_json(raw)
+
+    return AIResult(
+        processed_text=_clean_value(data.get("body")) or source_text,
+        extracted_fields=_filter_fields(data),
+        provider=provider["name"],
+        model=model,
+    )
+
+
+# =====================================================================
+# Основная точка входа с fallback-цепочкой
+# =====================================================================
 def process_draft(source_text: str, doc_type_name: str) -> AIResult:
-    """
-    Пробует провайдеров по цепочке. Возвращает AIResult.
-    Бросает AIError, если все упали или вышли за общий таймаут.
-    """
     providers = getattr(settings, "AI_PROVIDERS", [])
     total_timeout = getattr(settings, "AI_TOTAL_TIMEOUT", 45)
 
@@ -171,11 +287,22 @@ def process_draft(source_text: str, doc_type_name: str) -> AIResult:
             break
 
         try:
-            logger.info("AI: пробуем %s (%s)", provider["name"], provider["model"])
-            result = _call_provider(provider, source_text, doc_type_name)
-            logger.info("AI: успех через %s за %.1fс", provider["name"],
-                        time.monotonic() - start)
+            logger.info(
+                "AI: пробуем %s (%s)",
+                provider["name"], provider.get("model", "?"),
+            )
+
+            if provider["name"] == "gigachat":
+                result = _call_gigachat(provider, source_text, doc_type_name)
+            else:
+                result = _call_provider(provider, source_text, doc_type_name)
+
+            logger.info(
+                "AI: успех через %s за %.1fс",
+                provider["name"], time.monotonic() - start,
+            )
             return result
+
         except Exception as exc:
             logger.warning("AI: %s упал — %s", provider["name"], exc)
             errors.append(f"{provider['name']}: {exc}")
@@ -183,10 +310,26 @@ def process_draft(source_text: str, doc_type_name: str) -> AIResult:
 
     raise AIError("Все ИИ-провайдеры недоступны. " + " | ".join(errors))
 
+
 def pick_provider():
-    """Возвращает первый доступный AI-провайдер или None."""
     providers = getattr(settings, "AI_PROVIDERS", [])
     for p in providers:
         if p.get("api_key"):
+            return p
+    return None
+
+
+def pick_gigachat_provider():
+    providers = getattr(settings, "AI_PROVIDERS", [])
+    for p in providers:
+        if p.get("name") == "gigachat" and p.get("api_key"):
+            return p
+    return None
+
+
+def pick_openai_provider():
+    providers = getattr(settings, "AI_PROVIDERS", [])
+    for p in providers:
+        if p.get("api_key") and p.get("base_url"):
             return p
     return None

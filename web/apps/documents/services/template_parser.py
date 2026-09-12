@@ -119,11 +119,9 @@ PROMPT = """Ты — эксперт по делопроизводству.
 """
 
 
-def match_placeholders_via_ai(placeholders, provider):
+def _match_via_openai(placeholders, provider):
+    """Ветка для OpenAI-совместимых провайдеров (Groq, Gemini, OpenRouter)."""
     from openai import OpenAI
-
-    if not placeholders:
-        return []
 
     prompt = PROMPT.format(
         placeholders=json.dumps(placeholders, ensure_ascii=False)
@@ -145,17 +143,92 @@ def match_placeholders_via_ai(placeholders, provider):
         response_format={"type": "json_object"},
     )
     raw = response.choices[0].message.content
-    data = json.loads(raw)
+    return _parse_items(raw)
 
+
+def _match_via_gigachat(placeholders, provider):
+    """Ветка для GigaChat — своя авторизация через access_token."""
+    import uuid
+    import requests
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    auth_key = provider["api_key"]
+
+    # 1) Обмен Authorization key → access_token
+    token_resp = requests.post(
+        "https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json",
+            "RqUID": str(uuid.uuid4()),
+            "Authorization": f"Basic {auth_key}",
+        },
+        data={"scope": "GIGACHAT_API_PERS"},
+        verify=False,
+        timeout=15,
+    )
+    token_resp.raise_for_status()
+    token = token_resp.json()["access_token"]
+
+    # 2) Запрос на сопоставление плейсхолдеров
+    prompt = PROMPT.format(
+        placeholders=json.dumps(placeholders, ensure_ascii=False)
+    )
+    resp = requests.post(
+        "https://api.giga.chat/v1/chat/completions",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}",
+        },
+        json={
+            "model": provider.get("model", "GigaChat-2"),
+            "messages": [
+                {"role": "system",
+                 "content": "Ты отвечаешь строго JSON-объектом с ключом items."},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0.1,
+        },
+        verify=False,
+        timeout=provider.get("timeout", 30),
+    )
+    resp.raise_for_status()
+    raw = resp.json()["choices"][0]["message"]["content"]
+    return _parse_items(raw)
+
+
+def _parse_items(raw):
+    """Общий разбор ответа: dict с items, список или одиночный объект."""
+    data = json.loads(raw)
     if isinstance(data, dict):
         items = data.get("items")
         if isinstance(items, list):
             return items
-        # Модель вернула просто объект вместо массива
         return [data]
     if isinstance(data, list):
         return data
     return []
+
+
+def match_placeholders_via_ai(placeholders, provider):
+    if not placeholders:
+        return []
+
+    if not provider:
+        raise ValueError("Не передан провайдер")
+
+    name = provider.get("name", "")
+
+    if name == "gigachat":
+        return _match_via_gigachat(placeholders, provider)
+
+    if provider.get("base_url"):
+        return _match_via_openai(placeholders, provider)
+
+    raise ValueError(
+        f"Провайдер {name} не поддерживается для сопоставления плейсхолдеров"
+    )
 
 
 def parse_template(file_obj, provider=None):

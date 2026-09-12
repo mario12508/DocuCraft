@@ -5,6 +5,7 @@ from datetime import datetime
 import logging
 
 from apps.documents.docx_generator import generate_docx
+from apps.documents.drafts_loader import load_draft_categories
 from apps.documents.forms import Step1Form, Step2Form
 from apps.documents.models import Document, DocumentType, Template
 from apps.documents.pdf_generator import generate_pdf
@@ -28,40 +29,108 @@ SESSION_TEMPLATE = "draft_template_id"
 # Коды основного текста — не показываем в форме, они идут в textarea
 BODY_CODES = {"body", "processed_text", "document_text", "text"}
 
+# Служебные коды — заполняются не из AI
+NON_AI_CODES = BODY_CODES | {"organization"}
+
+
+# Маппинг: код (для шаблона и/или для UI) → список AI-ключей,
+# значения которых нужно склеить в этот код.
+AI_FIELD_MAP = {
+    # Коды для UI / RequiredField
+    "addressee":       ["addressee_position", "addressee_name"],
+    "sender":          ["author_position", "author_name"],
+    "signature":       ["author_position", "author_name"],
+    "subject":         ["topic"],
+
+    # Коды для шаблонов (Template.placeholders)
+    "sender_position": ["author_position"],
+    "sender_name":     ["author_name"],
+
+    # Общие поля
+    "date":            ["date"],
+    "number":          ["number"],
+}
+
+
+# ---------------------------------------------------------------------------
+# Утилиты
+# ---------------------------------------------------------------------------
+
+def _clean_value(v):
+    """Нормализует значение. Возвращает строку или None."""
+    if v is None:
+        return None
+    if isinstance(v, str):
+        s = v.strip()
+        if not s:
+            return None
+        if s.lower() in ("null", "none", "нет данных", "нет", "-", "—"):
+            return None
+        return s
+    if isinstance(v, (int, float)):
+        return str(v)
+    return None
+
+
+def _parse_date(s):
+    """Парсит строку ДД.ММ.ГГГГ → date. Иначе None."""
+    if not s:
+        return None
+    for fmt in ("%d.%m.%Y", "%d-%m-%Y", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except (ValueError, TypeError):
+            continue
+    return None
+
 
 # ---------------------------------------------------------------------------
 # Применение результата ИИ
 # ---------------------------------------------------------------------------
 
 def _apply_ai_result(document, result, doc_type):
-    """Применяет AIResult к документу. Маппинг — по template.placeholders."""
+    """
+    Раскладывает AI-ответ в extracted_fields по кодам из AI_FIELD_MAP.
+    Организация берётся из template.rules, дата — из AI или текущая.
+    """
     document.processed_text = result.processed_text
     document.ai_provider = result.provider
     document.ai_model = result.model
 
-    extracted = dict(result.extracted_fields or {})
+    ai = result.extracted_fields or {}
+    extracted = {}
 
-    # Автозаполнение даты
-    if "date" in extracted or any(
-        p.get("code") == "date"
-        for p in (document.template.placeholders or [])
-    ):
-        if not extracted.get("date"):
-            extracted["date"] = timezone.now().strftime("%d.%m.%Y")
-            document.document_date = timezone.now().date()
-        else:
-            try:
-                document.document_date = datetime.strptime(
-                    extracted["date"], "%d.%m.%Y"
-                ).date()
-            except (ValueError, TypeError):
-                document.document_date = timezone.now().date()
+    # 1) Прогоняем через маппинг
+    for code, ai_keys in AI_FIELD_MAP.items():
+        parts = []
+        for key in ai_keys:
+            val = _clean_value(ai.get(key))
+            if val:
+                parts.append(val)
+        if parts:
+            # Если ключ один — берём как есть, если несколько — склеиваем
+            extracted[code] = ", ".join(parts)
+
+    # 2) Организация — из правил шаблона
+    org = _clean_value((document.template.rules or {}).get("organization"))
+    if org:
+        extracted["organization"] = org
+
+    # 3) Дата документа — из AI, иначе текущая
+    date_value = extracted.get("date")
+    if not date_value:
+        date_value = timezone.now().strftime("%d.%m.%Y")
+        extracted["date"] = date_value
+    document.document_date = _parse_date(date_value) or timezone.now().date()
 
     document.extracted_fields = extracted
 
+    # 4) Недостающие — по плейсхолдерам шаблона, без body и organization
     document.missing_fields = [
         p["code"] for p in (document.template.placeholders or [])
-        if p.get("code") and not extracted.get(p["code"])
+        if p.get("code")
+        and p["code"] not in NON_AI_CODES
+        and not extracted.get(p["code"])
     ]
 
     document.status = document.recalc_status()
@@ -74,7 +143,6 @@ def _apply_ai_result(document, result, doc_type):
 # ---------------------------------------------------------------------------
 
 def _apply_post_changes(request, document):
-    """Сохраняет значения для всех плейсхолдеров шаблона."""
     extracted = dict(document.extracted_fields or {})
 
     for p in (document.template.placeholders or []):
@@ -94,7 +162,9 @@ def _apply_post_changes(request, document):
 
     document.missing_fields = [
         p["code"] for p in (document.template.placeholders or [])
-        if p.get("code") and not extracted.get(p["code"])
+        if p.get("code")
+        and p["code"] not in NON_AI_CODES
+        and not extracted.get(p["code"])
     ]
 
     processed = request.POST.get("processed_text")
@@ -120,6 +190,11 @@ class Step1View(LoginRequiredMixin, FormView):
         initial = super().get_initial()
         initial["source_text"] = self.request.session.get(SESSION_DRAFT, "")
         return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["draft_categories"] = load_draft_categories()
+        return context
 
     def form_valid(self, form):
         self.request.session[SESSION_DRAFT] = form.cleaned_data["source_text"]
@@ -182,7 +257,7 @@ class Step2View(LoginRequiredMixin, FormView):
             document.error_message = str(exc)
             document.missing_fields = [
                 p["code"] for p in (tpl.placeholders or [])
-                if p.get("code")
+                if p.get("code") and p["code"] not in NON_AI_CODES
             ]
             document.save()
 
@@ -203,10 +278,6 @@ class PreviewView(LoginRequiredMixin, View):
         )
 
     def build_required_fields(self, document):
-        """
-        Динамически: все плейсхолдеры шаблона, кроме body-кодов.
-        is_required — если код есть среди RequiredField типа.
-        """
         extracted = document.extracted_fields or {}
         tmpl = document.template
 
@@ -308,8 +379,7 @@ class DownloadView(LoginRequiredMixin, View):
             try:
                 buffer = generate_pdf(document)
             except Exception as exc:
-                import logging
-                logging.getLogger(__name__).exception("PDF generation failed")
+                logger.exception("PDF generation failed")
                 return HttpResponse(
                     f"Не удалось сформировать PDF: {exc}",
                     status=500,

@@ -189,9 +189,13 @@ class Command(BaseCommand):
             parse_template = None
 
         try:
-            from apps.documents.services.ai_processor import pick_provider
+            from apps.documents.services.ai_processor import (
+                pick_gigachat_provider,
+                pick_openai_provider,
+            )
         except ImportError:
-            pick_provider = None
+            pick_gigachat_provider = None
+            pick_openai_provider = None
 
         self.stdout.write("\nШаблоны (системные):")
         templates_dir = getattr(settings, "DOCX_TEMPLATES_DIR", None)
@@ -234,7 +238,11 @@ class Command(BaseCommand):
                     # --- Парсинг плейсхолдеров ---
                     if parse_template is not None:
                         try:
-                            provider = pick_provider() if pick_provider else None
+                            provider = None
+                            if pick_gigachat_provider:
+                                provider = pick_gigachat_provider()
+                            if not provider and pick_openai_provider:
+                                provider = pick_openai_provider()
                             placeholders, error = parse_template(
                                 obj.docx_template, provider,
                             )
