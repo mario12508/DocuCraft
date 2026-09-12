@@ -1,6 +1,8 @@
 # DocuCraft — ИИ-конструктор служебных документов
 
-[![Tests](https://gitverse.ru/hackrus.experts/cempionat-fsp-2026_it_miks_39/actions/workflows/tests.yml/badge.svg)](https://gitverse.ru/hackrus.experts/cempionat-fsp-2026_it_miks_39/actions)
+[![GitHub CI](https://github.com/mario12508/DocuCraft/actions/workflows/tests.yml/badge.svg)](https://github.com/mario12508/DocuCraft/actions/workflows/tests.yml)
+
+[![GitVerse CI](https://gitverse.ru/hackrus.experts/cempionat-fsp-2026_it_miks_39/badges/workflows/.gitverse-ci.yml/badge.svg)](https://gitverse.ru/hackrus.experts/cempionat-fsp-2026_it_miks_39/actions/workflows/.gitverse-ci.yml)
 
 **Сайт:** https://docucraft-kmwn.onrender.com
 
