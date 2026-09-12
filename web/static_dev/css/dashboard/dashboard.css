@@ -780,3 +780,163 @@
   align-items: center;
   gap: 6px;
 }
+
+/* =====================================================================
+   Формы dashboard
+   ===================================================================== */
+
+.dashboard-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.dashboard-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dashboard-form-field label {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.dashboard-form-field input[type="text"],
+.dashboard-form-field input[type="file"],
+.dashboard-form-field textarea {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-sidebar);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  box-sizing: border-box;
+  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dashboard-form-field textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.dashboard-form-field input[type="text"]:focus,
+.dashboard-form-field textarea:focus {
+  outline: none;
+  border-color: var(--text-muted);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .dashboard-form-field input[type="text"]:focus,
+[data-theme="dark"] .dashboard-form-field textarea:focus {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+}
+
+.dashboard-form-help {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.dashboard-form-help code {
+  background: var(--bg-hover);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+/* =====================================================================
+   Статусы парсинга шаблонов
+   ===================================================================== */
+
+.status-pending    { background: #f0f0f0; color: #555555; }
+.status-processing { background: #e3f2fd; color: #1565c0; }
+.status-parsing    { background: #e3f2fd; color: #1565c0; }
+.status-ready      { background: #e8f5e9; color: #2e7d32; }
+.status-error      { background: #ffebee; color: #c62828; }
+
+[data-theme="dark"] .status-pending    { background: #2a2a30; color: #bbbbbb; }
+[data-theme="dark"] .status-processing { background: #1a3a5c; color: #8ec5ff; }
+[data-theme="dark"] .status-parsing    { background: #1a3a5c; color: #8ec5ff; }
+[data-theme="dark"] .status-ready      { background: #1e3d22; color: #81c784; }
+[data-theme="dark"] .status-error      { background: #4a1e1e; color: #ef9a9a; }
+
+/* =====================================================================
+   Страница шаблонов
+   ===================================================================== */
+
+/* Заголовки секций «Системные» / «Мои» */
+.dashboard-home > h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 24px 0 12px;
+}
+
+/* Карточки шаблонов в списке */
+.doc-card-item .doc-card-id {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.doc-card-item .doc-card-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Таблица плейсхолдеров в detail.html */
+.dashboard-table td input[type="text"] {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-sidebar);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.dashboard-table td input[type="text"]:focus {
+  outline: none;
+  border-color: var(--text-muted);
+}
+
+.dashboard-table code {
+  background: var(--bg-hover);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12.5px;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+[data-theme="dark"] .dashboard-table code {
+  background: #2a2a30;
+}
+
+/* Ссылка «Скачать .docx» */
+.dashboard-btn i.bi-download {
+  font-size: 14px;
+}
+
+/* =====================================================================
+   Прочее
+   ===================================================================== */
+
+.dashboard-alert.warning {
+  background: #fff8e1;
+  color: #8d6e00;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin: 12px 0;
+}
+
+[data-theme="dark"] .dashboard-alert.warning {
+  background: #4a3f1a;
+  color: #ffe082;
+}

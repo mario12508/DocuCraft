@@ -21,7 +21,6 @@
     </p>
   </header>
 
-  {# ── Блок ошибки с кнопкой «Повторить» (Сценарий 6) ── #}
   {% if document.status == "error" %}
   <div class="doc-alert doc-alert-danger">
     <strong>Не удалось обработать текст.</strong>
@@ -46,12 +45,11 @@
   {% endif %}
 
   {% if messages %}
-  {% for msg in messages %}
-  <div class="doc-alert doc-alert-info">{{ msg }}</div>
-  {% endfor %}
+    {% for msg in messages %}
+      <div class="doc-alert doc-alert-info">{{ msg }}</div>
+    {% endfor %}
   {% endif %}
 
-  {# ── Плашка «какой ИИ сработал» ── #}
   {% if document.ai_provider %}
   <div class="doc-ai-badge">
     <i class="bi bi-cpu"></i>
@@ -64,21 +62,31 @@
     {% csrf_token %}
 
     <section class="doc-block">
-      <h2>Реквизиты</h2>
+      <h2>Реквизиты шаблона</h2>
       <p class="doc-block-note">
-        Незаполненные поля будут помечены в документе как
-        <code>[Заполнить]</code>. Оставьте пустыми, если данных нет.
+        Поля ниже определены в вашем шаблоне.
+        Незаполненные будут помечены в документе как <code>[Заполнить]</code>.
       </p>
 
       <div class="doc-req-list">
         {% for field in required_fields %}
-        <label class="doc-req {% if field.is_missing %}doc-req-missing{% endif %}">
-          <span class="doc-req-label">{{ field.label }}</span>
-          <input type="text"
-                 name="field_{{ field.code }}"
-                 value="{{ field.value }}"
-                 placeholder="{{ field.placeholder }}">
-        </label>
+          <label class="doc-req {% if field.is_missing %}doc-req-missing{% endif %}">
+            <span class="doc-req-label">
+              {{ field.label }}
+              {% if field.is_required %}
+                <span class="doc-req-star" title="Обязательный реквизит">*</span>
+              {% endif %}
+            </span>
+            <input type="text"
+                   name="field_{{ field.code }}"
+                   value="{{ field.value }}"
+                   placeholder="{{ field.placeholder }}">
+          </label>
+        {% empty %}
+          <p class="doc-muted">
+            В шаблоне нет плейсхолдеров. Добавьте их в файл <code>.docx</code>
+            вида <code>[Кому]</code>, <code>[Дата]</code> и перезагрузите шаблон.
+          </p>
         {% endfor %}
       </div>
     </section>
@@ -92,32 +100,30 @@
                 class="doc-textarea">{{ document.processed_text }}</textarea>
     </section>
 
-    {# ── Статус-бар ── #}
     <div class="doc-status-bar">
       <span class="doc-status-badge doc-status-{{ document.status }}">
         {{ document.get_status_display }}
       </span>
 
       {% if document.missing_fields %}
-      <span class="doc-status-note">
+        <span class="doc-status-note">
           Не заполнено: {{ document.missing_fields|length }}
         </span>
       {% endif %}
 
       {% if document.status != "ready" and document.status != "error" %}
-      <button type="submit" name="action" value="mark_ready" class="doc-btn">
-        <i class="bi bi-check2-circle"></i> Отметить готовым
-      </button>
+        <button type="submit" name="action" value="mark_ready" class="doc-btn">
+          <i class="bi bi-check2-circle"></i> Отметить готовым
+        </button>
       {% endif %}
 
       {% if document.status == "ready" %}
-      <button type="submit" name="action" value="mark_draft" class="doc-btn">
-        <i class="bi bi-pencil"></i> Вернуть в черновик
-      </button>
+        <button type="submit" name="action" value="mark_draft" class="doc-btn">
+          <i class="bi bi-pencil"></i> Вернуть в черновик
+        </button>
       {% endif %}
     </div>
 
-    {# ── Действия ── #}
     <div class="doc-actions">
       <a href="{% url 'documents:step1' %}" class="doc-btn">
         <i class="bi bi-arrow-left"></i> Новый документ
@@ -147,68 +153,15 @@
     </div>
   </form>
 
+  {# ── Предпросмотр через iframe ── #}
   <div id="docxPreviewWrap" hidden style="margin-top: 24px;">
     <h2 style="font-size: 16px; margin: 0 0 10px;">Предпросмотр документа</h2>
-    <div class="docx-preview-page">
-      {# Шапка #}
-      {% if document.template.rules.layout == "modern" %}
-      {% if document.extracted_fields.subject %}
-      <p style="font-weight:700;">{{ document.extracted_fields.subject }}</p>
-      {% endif %}
-      <table style="width:100%;">
-        <tr>
-          <td style="font-weight:700;">Кому:</td>
-          <td style="font-weight:700;">От кого:</td>
-        </tr>
-        <tr>
-          <td>{{ document.extracted_fields.addressee|default:"—" }}</td>
-          <td>{{ document.extracted_fields.sender|default:"—" }}</td>
-        </tr>
-      </table>
-      {% else %}
-      {% if document.extracted_fields.addressee %}
-      <p style="text-align:right; margin:0;">
-        {% for line in document.extracted_fields.addressee.splitlines %}
-        {{ line }}<br>
-        {% endfor %}
-      </p>
-      {% endif %}
-      {% if document.extracted_fields.date or document.extracted_fields.number %}
-      <p>
-        {% if document.extracted_fields.date %}Дата: {{ document.extracted_fields.date }}{% endif %}
-        {% if document.extracted_fields.number %} Номер: {{ document.extracted_fields.number }}{% endif %}
-      </p>
-      {% endif %}
-      {% if document.extracted_fields.subject %}
-      <p style="text-align:center; font-weight:700;">{{ document.extracted_fields.subject }}</p>
-      {% endif %}
-      {% endif %}
-
-      {# Основной текст #}
-      {% for block in document.processed_text.splitlines %}
-      {% if block.strip %}
-      <p style="text-indent:{% if document.template.rules.layout == 'classic' %}1.25em{% else %}0{% endif %};">
-        {{ block }}
-      </p>
-      {% endif %}
-      {% endfor %}
-
-      {# Подпись #}
-      {% with signature=document.extracted_fields.signature|default:"" sender=document.extracted_fields.sender|default:"" %}
-  {% if signature %}
-    <div style="margin-top:24px; text-align:{% if document.template.rules.layout == 'modern' %}center{% else %}left{% endif %};">
-      {% for line in signature.splitlines %}
-        {{ line }}<br>
-      {% endfor %}
-    </div>
-  {% elif sender %}
-    <div style="margin-top:24px; text-align:{% if document.template.rules.layout == 'modern' %}center{% else %}left{% endif %};">
-      {% for line in sender.splitlines %}
-        {{ line }}<br>
-      {% endfor %}
-    </div>
-  {% endif %}
-{% endwith %}
-    </div>
+    <iframe
+        src="{% url 'documents:preview_docx' document.pk %}"
+        style="width: 100%; height: 900px; border: 1px solid var(--border-color); border-radius: 12px; background: #fff;"
+        loading="lazy">
+    </iframe>
   </div>
-  {% endblock %}
+
+</div>
+{% endblock %}

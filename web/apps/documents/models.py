@@ -1,6 +1,7 @@
 __all__ = ()
 
 from django.db import models
+from django.conf import settings
 
 
 class DocumentType(models.Model):
@@ -25,26 +26,72 @@ class DocumentType(models.Model):
 
 
 class Template(models.Model):
-    """Шаблон оформления организации."""
+    class Kind(models.TextChoices):
+        SYSTEM = "system", "Системный"
+        USER = "user", "Пользовательский"
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="document_templates",
+        null=True, blank=True,
+        verbose_name="Владелец",
+        help_text="Пусто — системный шаблон, доступен всем.",
+    )
+    kind = models.CharField(
+        "Тип шаблона", max_length=20,
+        choices=Kind.choices, default=Kind.SYSTEM,
+    )
 
     code = models.SlugField("Код", unique=True)
     name = models.CharField("Название", max_length=100)
     description = models.TextField("Описание", blank=True)
-    rules = models.JSONField("Правила оформления", default=dict, help_text="...")
+    rules = models.JSONField("Правила оформления", default=dict)
 
-    # НОВОЕ ПОЛЕ ↓
     docx_template = models.FileField(
         "Файл-шаблон DOCX",
         upload_to="templates/",
         blank=True,
-        help_text=(
-            "Файл .docx с плейсхолдерами [Кому], [Должность], [ФИО], "
-            "[Дата], [Номер], [Заголовок], [Текст документа]. "
-            "Если не задан — используется программная сборка."
-        ),
     )
 
+    placeholders = models.JSONField(
+        "Плейсхолдеры", default=list, blank=True,
+        help_text="Заполняется автоматически при загрузке файла.",
+    )
+
+    parse_status = models.CharField(
+        "Статус парсинга", max_length=20,
+        choices=[
+            ("pending", "Ожидает"),
+            ("processing", "В обработке"),
+            ("ready", "Готов"),
+            ("error", "Ошибка"),
+        ],
+        default="ready",
+    )
+    parse_error = models.TextField("Ошибка парсинга", blank=True)
+
     is_active = models.BooleanField("Активен", default=True)
+    created_at = models.DateTimeField("Создан", auto_now_add=True)
+    updated_at = models.DateTimeField("Обновлён", auto_now=True)
+
+    class Meta:
+        verbose_name = "Шаблон"
+        verbose_name_plural = "Шаблоны"
+        ordering = ["kind", "name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "code"],
+                name="unique_template_code_per_owner",
+            ),
+        ]
+
+    def __str__(self):
+        return self.name or self.code
+
+    @property
+    def is_system(self):
+        return self.kind == self.Kind.SYSTEM
 
 
 class RequiredField(models.Model):

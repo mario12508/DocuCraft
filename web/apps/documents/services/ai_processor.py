@@ -182,3 +182,11 @@ def process_draft(source_text: str, doc_type_name: str) -> AIResult:
             continue
 
     raise AIError("Все ИИ-провайдеры недоступны. " + " | ".join(errors))
+
+def pick_provider():
+    """Возвращает первый доступный AI-провайдер или None."""
+    providers = getattr(settings, "AI_PROVIDERS", [])
+    for p in providers:
+        if p.get("api_key"):
+            return p
+    return None

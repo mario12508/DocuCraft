@@ -1,16 +1,30 @@
 {% load static %}
-<div class="docx-preview">
-  <div class="docx-preview-page">
-    {{ html|safe }}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Предпросмотр — Документ #{{ document.pk }}</title>
+  <link rel="stylesheet" href="{% static 'css/documents/documents.css' %}">
+</head>
+<body style="margin:0; background:#f0f0f0;">
+
+  <div class="docx-preview">
+    <div class="docx-preview-page">
+      {{ html|safe }}
+    </div>
+
+    {% if warnings %}
+      <details class="docx-preview-warnings">
+        <summary>Предупреждения конвертера ({{ warnings|length }})</summary>
+        <ul>
+          {% for w in warnings %}
+            <li>{{ w.message }}</li>
+          {% endfor %}
+        </ul>
+      </details>
+    {% endif %}
   </div>
-  {% if warnings %}
-    <details class="docx-preview-warnings">
-      <summary>Предупреждения конвертера ({{ warnings|length }})</summary>
-      <ul>
-        {% for w in warnings %}
-          <li>{{ w.message }}</li>
-        {% endfor %}
-      </ul>
-    </details>
-  {% endif %}
-</div>
+
+</body>
+</html>

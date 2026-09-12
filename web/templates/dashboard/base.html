@@ -33,6 +33,13 @@
           <span class="tooltip">Главная</span>
         </a>
 
+        <a href="{% url 'dashboard:templates' %}"
+           class="dashboard-nav-link {% if 'template' in request.resolver_match.url_name %}active{% endif %}">
+          <i class="bi bi-collection"></i>
+          <span class="link-text">Шаблоны</span>
+          <span class="tooltip">Шаблоны</span>
+        </a>
+
         <a href="{% url 'dashboard:documents' %}"
            class="dashboard-nav-link {% if 'document' in request.resolver_match.url_name %}active{% endif %}">
           <i class="bi bi-file-earmark-text"></i>

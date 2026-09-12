@@ -1,0 +1,72 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Шаблоны — Панель{% endblock %}
+
+{% block dashboard_content %}
+<div class="dashboard-home">
+
+  <div class="dashboard-header">
+    <h1>{{ page_title }}</h1>
+    <p class="dashboard-subtitle">{{ page_subtitle }}</p>
+  </div>
+
+  <div class="dashboard-actions">
+    <a href="{% url 'dashboard:template_upload' %}"
+       class="dashboard-btn dashboard-btn-primary">
+      <i class="bi bi-upload"></i> Загрузить шаблон
+    </a>
+  </div>
+
+  <h2 style="margin-top:24px;">Системные</h2>
+  <div class="docs-cards">
+    {% for t in system_templates %}
+      <a href="{% url 'dashboard:template_detail' t.pk %}" class="doc-card-item">
+        <div class="doc-card-head">
+          <span class="doc-card-id">системный</span>
+          <span class="status status-ready">готов</span>
+        </div>
+        <div class="doc-card-title">{{ t.name }}</div>
+        <div class="doc-card-sub">
+          {{ t.description|default:"Без описания"|truncatechars:100 }}
+        </div>
+        <div class="doc-card-date">
+          <i class="bi bi-list-check"></i>
+          {{ t.placeholders|length }} реквизит(ов)
+        </div>
+      </a>
+    {% empty %}
+      <p class="dashboard-muted">Системных шаблонов пока нет.</p>
+    {% endfor %}
+  </div>
+
+  <h2 style="margin-top:24px;">Мои шаблоны</h2>
+  <div class="docs-cards">
+    {% for t in user_templates %}
+      <a href="{% url 'dashboard:template_detail' t.pk %}" class="doc-card-item">
+        <div class="doc-card-head">
+          <span class="doc-card-id">мой</span>
+          <span class="status status-{{ t.parse_status }}">
+            {{ t.get_parse_status_display }}
+          </span>
+        </div>
+        <div class="doc-card-title">{{ t.name }}</div>
+        <div class="doc-card-sub">
+          {% if t.description %}
+            {{ t.description|truncatechars:100 }}
+          {% else %}
+            Загружен {{ t.created_at|date:"d.m.Y H:i" }}
+          {% endif %}
+        </div>
+        <div class="doc-card-date">
+          <i class="bi bi-list-check"></i>
+          {{ t.placeholders|length }} реквизит(ов)
+        </div>
+      </a>
+    {% empty %}
+      <p class="dashboard-muted">Вы ещё не загружали шаблонов.</p>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}{{ template.name }} — Панель{% endblock %}
+
+{% block dashboard_content %}
+<div class="dashboard-home">
+  <div class="dashboard-header">
+    <h1>{{ template.name }}</h1>
+    <p class="dashboard-subtitle">{{ template.description }}</p>
+  </div>
+
+  {% if template.parse_error %}
+  <div class="dashboard-alert warning">
+    <strong>Парсинг:</strong> {{ template.parse_error }}
+  </div>
+  {% endif %}
+
+  <div class="dashboard-actions">
+    <a href="{% url 'dashboard:templates' %}" class="dashboard-btn">← К списку</a>
+
+    {% if template.docx_template %}
+    <a href="{{ template.docx_template.url }}" class="dashboard-btn">
+      <i class="bi bi-download"></i> Скачать .docx
+    </a>
+    {% endif %}
+
+    {% if can_edit %}
+    <form method="post" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" name="action" value="reparse" class="dashboard-btn">
+        <i class="bi bi-arrow-clockwise"></i> Переразобрать ИИ
+      </button>
+    </form>
+
+    <form method="post" style="display:inline;"
+          onsubmit="return confirm('Удалить шаблон?');">
+      {% csrf_token %}
+      <button type="submit" name="action" value="delete" class="dashboard-btn danger">
+        <i class="bi bi-trash"></i> Удалить
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  <h2>Реквизиты в шаблоне ({{ template.placeholders|length }})</h2>
+
+  {% if can_edit %}
+  <form method="post">
+    {% csrf_token %}
+    <table class="dashboard-table">
+      <thead>
+      <tr>
+        <th>Плейсхолдер</th>
+        <th>Название реквизита</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for p in template.placeholders %}
+      <tr>
+        <td><code>{{ p.placeholder }}</code></td>
+        <td>
+          <input type="text"
+                 name="label_{{ forloop.counter0 }}"
+                 value="{{ p.label }}"
+                 style="width:100%;">
+          <input type="hidden" name="code_{{ forloop.counter0 }}"
+                 value="{{ p.code }}">
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="dashboard-actions" style="margin-top: 12px;">
+      <button type="submit" name="action" value="update_placeholders"
+              class="dashboard-btn dashboard-btn-primary">
+        <i class="bi bi-save"></i> Сохранить
+      </button>
+    </div>
+  </form>
+  {% else %}
+  <table class="dashboard-table">
+    <thead>
+    <tr>
+      <th>Плейсхолдер</th>
+      <th>Название реквизита</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for p in template.placeholders %}
+    <tr>
+      <td><code>{{ p.placeholder }}</code></td>
+      <td>{{ p.label }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

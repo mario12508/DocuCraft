@@ -1,0 +1,57 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Загрузить шаблон — Панель{% endblock %}
+
+{% block dashboard_content %}
+<div class="dashboard-home">
+
+  <div class="dashboard-header">
+    <h1>{{ page_title }}</h1>
+    <p class="dashboard-subtitle">{{ page_subtitle }}</p>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="dashboard-form"
+        style="max-width: 640px;">
+
+    {% csrf_token %}
+
+    <div class="dashboard-form-field">
+      <label for="id_name">Название шаблона</label>
+      <input type="text" id="id_name" name="name" required maxlength="100"
+             placeholder="Например: Шаблон отдела кадров">
+      <div class="dashboard-form-help">
+        Это название увидят пользователи при выборе шаблона.
+      </div>
+    </div>
+
+    <div class="dashboard-form-field">
+      <label for="id_description">Описание (необязательно)</label>
+      <textarea id="id_description" name="description" rows="3"
+                placeholder="Кратко опишите, для каких документов подходит шаблон"></textarea>
+    </div>
+
+    <div class="dashboard-form-field">
+      <label for="id_file">Файл .docx</label>
+      <input type="file" id="id_file" name="file" accept=".docx" required>
+      <div class="dashboard-form-help">
+        Загрузите Word-файл, в котором вместо значений стоят плейсхолдеры
+        вида <code>[Кому]</code>, <code>[Дата]</code>,
+        <code>[Текст документа]</code> и т.п.
+        После загрузки система сама найдёт их и покажет список.
+      </div>
+    </div>
+
+    <div class="dashboard-actions">
+      <a href="{% url 'dashboard:templates' %}" class="dashboard-btn">
+        <i class="bi bi-arrow-left"></i> Отмена
+      </a>
+      <button type="submit" class="dashboard-btn dashboard-btn-primary">
+        <i class="bi bi-upload"></i> Загрузить и распарсить
+      </button>
+    </div>
+
+  </form>
+
+</div>
+{% endblock %}

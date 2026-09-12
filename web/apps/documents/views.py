@@ -1,8 +1,10 @@
 __all__ = ()
 
+from datetime import datetime
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import FileResponse
+from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -21,65 +23,76 @@ SESSION_TYPE = "draft_document_type_id"
 SESSION_TEMPLATE = "draft_template_id"
 
 
+# Коды основного текста — не показываем в форме, они идут в textarea
+BODY_CODES = {"body", "processed_text", "document_text", "text"}
+
+
+# ---------------------------------------------------------------------------
+# Применение результата ИИ
+# ---------------------------------------------------------------------------
+
 def _apply_ai_result(document, result, doc_type):
+    """Применяет AIResult к документу. Маппинг — по template.placeholders."""
     document.processed_text = result.processed_text
     document.ai_provider = result.provider
     document.ai_model = result.model
 
-    mapped = {}
-    for rf in doc_type.required_fields.all():
-        if rf.ai_source:
-            parts = [str(result.extracted_fields.get(k, ""))
-                     for k in rf.ai_source]
-            value = ", ".join(p for p in parts if p)
-        else:
-            value = result.extracted_fields.get(rf.code, "")
-        if value:
-            mapped[rf.code] = value
+    extracted = dict(result.extracted_fields or {})
 
-    # Автозаполнение даты (ТЗ п. 1.3)
-    if "date" in [rf.code for rf in doc_type.required_fields.all()]:
-        if not mapped.get("date"):
-            mapped["date"] = timezone.now().strftime("%d.%m.%Y")
+    # Автозаполнение даты
+    if "date" in extracted or any(
+        p.get("code") == "date"
+        for p in (document.template.placeholders or [])
+    ):
+        if not extracted.get("date"):
+            extracted["date"] = timezone.now().strftime("%d.%m.%Y")
             document.document_date = timezone.now().date()
         else:
-            # Попробуем распарсить дату из ИИ-ответа
             try:
-                from datetime import datetime
                 document.document_date = datetime.strptime(
-                    mapped["date"], "%d.%m.%Y"
+                    extracted["date"], "%d.%m.%Y"
                 ).date()
             except (ValueError, TypeError):
                 document.document_date = timezone.now().date()
 
-    document.extracted_fields = mapped
+    document.extracted_fields = extracted
+
     document.missing_fields = [
-        rf.code for rf in doc_type.required_fields.all()
-        if not mapped.get(rf.code)
+        p["code"] for p in (document.template.placeholders or [])
+        if p.get("code") and not extracted.get(p["code"])
     ]
+
     document.status = document.recalc_status()
     document.error_message = ""
     document.save()
 
 
+# ---------------------------------------------------------------------------
+# Сохранение изменений из формы
+# ---------------------------------------------------------------------------
+
 def _apply_post_changes(request, document):
+    """Сохраняет значения для всех плейсхолдеров шаблона."""
     extracted = dict(document.extracted_fields or {})
 
-    for rf in document.document_type.required_fields.all():
-        raw = request.POST.get(f"field_{rf.code}")
+    for p in (document.template.placeholders or []):
+        code = p.get("code")
+        if not code:
+            continue
+        raw = request.POST.get(f"field_{code}")
         if raw is None:
             continue
         value = raw.strip()
         if value:
-            extracted[rf.code] = value
+            extracted[code] = value
         else:
-            extracted.pop(rf.code, None)
+            extracted.pop(code, None)
 
     document.extracted_fields = extracted
+
     document.missing_fields = [
-        rf.code
-        for rf in document.document_type.required_fields.all()
-        if not extracted.get(rf.code)
+        p["code"] for p in (document.template.placeholders or [])
+        if p.get("code") and not extracted.get(p["code"])
     ]
 
     processed = request.POST.get("processed_text")
@@ -93,9 +106,11 @@ def _apply_post_changes(request, document):
     return document
 
 
-class Step1View(LoginRequiredMixin, FormView):
-    """Шаг 1. Ввод черновика."""
+# ---------------------------------------------------------------------------
+# Шаги 1-2
+# ---------------------------------------------------------------------------
 
+class Step1View(LoginRequiredMixin, FormView):
     template_name = "documents/step1.html"
     form_class = Step1Form
 
@@ -110,10 +125,13 @@ class Step1View(LoginRequiredMixin, FormView):
 
 
 class Step2View(LoginRequiredMixin, FormView):
-    """Шаг 2. Выбор типа документа и шаблона."""
-
     template_name = "documents/step2.html"
     form_class = Step2Form
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
 
     def dispatch(self, request, *args, **kwargs):
         if SESSION_DRAFT not in request.session:
@@ -147,7 +165,7 @@ class Step2View(LoginRequiredMixin, FormView):
             document_type=dt, template=tpl,
             source_text=source_text, processed_text=source_text,
             extracted_fields={},
-            missing_fields=[f.code for f in dt.required_fields.all()],
+            missing_fields=[],
             status="processing",
         )
 
@@ -161,12 +179,17 @@ class Step2View(LoginRequiredMixin, FormView):
             document.status = "error"
             document.error_message = str(exc)
             document.missing_fields = [
-                rf.code for rf in dt.required_fields.all()
+                p["code"] for p in (tpl.placeholders or [])
+                if p.get("code")
             ]
             document.save()
 
         return redirect("documents:preview", pk=document.pk)
 
+
+# ---------------------------------------------------------------------------
+# Шаг 3 — preview
+# ---------------------------------------------------------------------------
 
 class PreviewView(LoginRequiredMixin, View):
     template_name = "documents/preview.html"
@@ -178,17 +201,35 @@ class PreviewView(LoginRequiredMixin, View):
         )
 
     def build_required_fields(self, document):
+        """
+        Динамически: все плейсхолдеры шаблона, кроме body-кодов.
+        is_required — если код есть среди RequiredField типа.
+        """
         extracted = document.extracted_fields or {}
-        return [
-            {
-                "code": rf.code,
-                "label": rf.label,
-                "placeholder": rf.placeholder,
-                "value": extracted.get(rf.code, ""),
-                "is_missing": not extracted.get(rf.code),
-            }
-            for rf in document.document_type.required_fields.all()
-        ]
+        tmpl = document.template
+
+        required_codes = set(
+            document.document_type.required_fields.values_list("code", flat=True)
+        )
+
+        fields = []
+        seen = set()
+        for p in (tmpl.placeholders or []):
+            code = p.get("code")
+            if not code or code in seen:
+                continue
+            if code in BODY_CODES:
+                continue
+            seen.add(code)
+            fields.append({
+                "code": code,
+                "label": p.get("label") or code,
+                "placeholder": p.get("placeholder") or "",
+                "value": extracted.get(code, ""),
+                "is_missing": not extracted.get(code),
+                "is_required": code in required_codes,
+            })
+        return fields
 
     def get(self, request, pk):
         document = self.get_document(pk)
@@ -205,7 +246,6 @@ class PreviewView(LoginRequiredMixin, View):
         document = self.get_document(pk)
         action = (request.POST.get("action") or "save").strip()
 
-        # 1) Явное переключение статуса — БЕЗ пересчёта
         if action == "mark_ready":
             document.status = "ready"
             document.save(update_fields=["status"])
@@ -218,7 +258,6 @@ class PreviewView(LoginRequiredMixin, View):
             messages.info(request, "Документ переведён в черновик.")
             return redirect("documents:preview", pk=document.pk)
 
-        # 2) Обычное сохранение правок
         _apply_post_changes(request, document)
 
         if action == "download":
@@ -228,7 +267,6 @@ class PreviewView(LoginRequiredMixin, View):
             url = reverse("documents:download", args=[document.pk])
             return redirect(f"{url}?format=pdf")
 
-        # 3) Retry — отдельная ветка со СВОИМ сообщением и СВОИМ return
         if action == "retry":
             try:
                 result = process_draft(
@@ -243,14 +281,15 @@ class PreviewView(LoginRequiredMixin, View):
                 messages.error(request, f"ИИ недоступен: {exc}")
             return redirect("documents:preview", pk=document.pk)
 
-        # 4) Простое сохранение
         messages.success(request, "Изменения сохранены.")
         return redirect("documents:preview", pk=document.pk)
 
 
-class DownloadView(LoginRequiredMixin, View):
-    """Генерирует DOCX или PDF и отдаёт файл."""
+# ---------------------------------------------------------------------------
+# Скачивание
+# ---------------------------------------------------------------------------
 
+class DownloadView(LoginRequiredMixin, View):
     def get(self, request, pk):
         document = get_object_or_404(Document, pk=pk)
         return self._serve(document, request.GET.get("format", "docx"))
@@ -261,15 +300,14 @@ class DownloadView(LoginRequiredMixin, View):
         return self._serve(document, request.POST.get("format", "docx"))
 
     def _serve(self, document, fmt):
-        from django.http import HttpResponse
-
         fmt = (fmt or "docx").lower()
 
         if fmt == "pdf":
             try:
                 buffer = generate_pdf(document)
             except Exception as exc:
-                logger.exception("PDF generation failed")
+                import logging
+                logging.getLogger(__name__).exception("PDF generation failed")
                 return HttpResponse(
                     f"Не удалось сформировать PDF: {exc}",
                     status=500,
@@ -290,16 +328,31 @@ class DownloadView(LoginRequiredMixin, View):
             filename=filename, content_type=content_type,
         )
 
+
+# ---------------------------------------------------------------------------
+# Предпросмотр DOCX — отдельная вьюха, рендерится в iframe
+# ---------------------------------------------------------------------------
+
 class DocxPreviewView(LoginRequiredMixin, View):
     """Рендерит DOCX в HTML для предпросмотра в браузере."""
 
     def get(self, request, pk):
-        import mammoth
+        try:
+            import mammoth
+        except ImportError:
+            return HttpResponse(
+                "Для предпросмотра установите mammoth: pip install mammoth",
+                status=500,
+                content_type="text/plain; charset=utf-8",
+            )
 
-        document = get_object_or_404(Document, pk=pk)
+        document = get_object_or_404(
+            Document.objects.select_related("document_type", "template"),
+            pk=pk,
+        )
         docx_buffer = generate_docx(document)
-
         result = mammoth.convert_to_html(docx_buffer)
+
         return render(
             request,
             "documents/partials/_docx_preview.html",

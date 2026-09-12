@@ -1,6 +1,11 @@
 __all__ = ()
 
+from pathlib import Path
+
+from django.conf import settings
+from django.core.files import File
 from django.core.management.base import BaseCommand
+from django.db.models import ProtectedError
 
 from apps.documents.models import DocumentType, RequiredField, Template
 
@@ -85,6 +90,7 @@ DOCUMENT_TYPES = [
 TEMPLATES = [
     {
         "code": "classic_corporate",
+        "kind": "system",
         "name": "Классический корпоративный",
         "description": (
             "Times New Roman 14 pt, интервал 1.5, поля 3/1.5/2/2 см. "
@@ -110,6 +116,7 @@ TEMPLATES = [
     },
     {
         "code": "modern_regulatory",
+        "kind": "system",
         "name": "Современный регламентный",
         "description": (
             "Arial 12 pt, интервал 1.15, поля 2.5/2/1.5/1.5 см. "
@@ -141,26 +148,13 @@ class Command(BaseCommand):
     help = "Заводит стартовые типы документов, шаблоны и реквизиты"
 
     def handle(self, *args, **options):
-        from pathlib import Path
-        from django.conf import settings
-        from django.core.files import File
-        from django.db.models import ProtectedError
+        self._seed_document_types()
+        self._seed_system_templates()
 
-        # --- Чистим устаревшие шаблоны (те, что больше не в TEMPLATES) ---
-        valid_codes = {tpl["code"] for tpl in TEMPLATES}
-        for old in Template.objects.exclude(code__in=valid_codes):
-            try:
-                old.delete()
-                self.stdout.write(self.style.WARNING(
-                    f"Удалён устаревший шаблон: {old.code}"
-                ))
-            except ProtectedError:
-                self.stdout.write(self.style.WARNING(
-                    f"Шаблон {old.code} не удалён — на него ссылаются документы. "
-                    f"Переназначьте их в админке и запустите команду снова."
-                ))
-
-        # --- Типы документов ---
+    # ------------------------------------------------------------------
+    # Типы документов
+    # ------------------------------------------------------------------
+    def _seed_document_types(self):
         self.stdout.write("Типы документов:")
         for dt in DOCUMENT_TYPES:
             fields = dt["fields"]
@@ -183,28 +177,97 @@ class Command(BaseCommand):
             mark = "+" if created else "~"
             self.stdout.write(f"  [{mark}] {doc_type.name}")
 
-        # --- Шаблоны ---
-        self.stdout.write("\nШаблоны:")
+    # ------------------------------------------------------------------
+    # Системные шаблоны
+    # ------------------------------------------------------------------
+    def _seed_system_templates(self):
+        # Импорты внутри метода — чтобы seed не падал при отсутствии
+        # ai_processor.py или template_parser.py в первые минуты разработки.
+        try:
+            from apps.documents.services.template_parser import parse_template
+        except ImportError:
+            parse_template = None
+
+        try:
+            from apps.documents.services.ai_processor import pick_provider
+        except ImportError:
+            pick_provider = None
+
+        self.stdout.write("\nШаблоны (системные):")
         templates_dir = getattr(settings, "DOCX_TEMPLATES_DIR", None)
 
-        for tpl in TEMPLATES:
-            # ВАЖНО: get, а не pop — иначе мутируем исходный словарь
-            file_name = tpl.get("docx_template_name")
+        # --- Чистим устаревшие системные шаблоны ---
+        valid_codes = {tpl["code"] for tpl in TEMPLATES}
+        for old in Template.objects.filter(kind="system").exclude(
+            code__in=valid_codes
+        ):
+            try:
+                old.delete()
+                self.stdout.write(self.style.WARNING(
+                    f"  Удалён устаревший шаблон: {old.code}"
+                ))
+            except ProtectedError:
+                self.stdout.write(self.style.WARNING(
+                    f"  Шаблон {old.code} не удалён — есть документы. "
+                    f"Переназначьте их в админке и запустите команду снова."
+                ))
 
-            # Копируем всё, кроме служебного имени файла
-            defaults = {k: v for k, v in tpl.items() if k != "docx_template_name"}
+        # --- Создаём/обновляем системные шаблоны ---
+        for tpl in TEMPLATES:
+            file_name = tpl.get("docx_template_name")
+            defaults = {k: v for k, v in tpl.items()
+                        if k != "docx_template_name"}
 
             obj, created = Template.objects.update_or_create(
-                code=tpl["code"], defaults=defaults,
+                owner__isnull=True,
+                code=tpl["code"],
+                defaults=defaults,
             )
 
             if file_name and templates_dir:
                 src = Path(templates_dir) / file_name
                 if src.exists():
-                    # Всегда перезаписываем файл — гарантируем актуальность
                     with open(src, "rb") as f:
                         obj.docx_template.save(file_name, File(f), save=True)
                     self.stdout.write(f"    привязан файл: {file_name}")
+
+                    # --- Парсинг плейсхолдеров ---
+                    if parse_template is not None:
+                        try:
+                            provider = pick_provider() if pick_provider else None
+                            placeholders, error = parse_template(
+                                obj.docx_template, provider,
+                            )
+                            obj.placeholders = placeholders
+                            obj.parse_status = "error" if error else "ready"
+                            obj.parse_error = error or ""
+                            obj.save(update_fields=[
+                                "placeholders",
+                                "parse_status",
+                                "parse_error",
+                            ])
+                            self.stdout.write(
+                                f"    найдено реквизитов: {len(placeholders)}"
+                            )
+                            if error:
+                                self.stdout.write(self.style.WARNING(
+                                    f"    парсинг: {error}"
+                                ))
+                        except Exception as exc:
+                            obj.parse_status = "error"
+                            obj.parse_error = f"Ошибка парсинга: {exc}"
+                            obj.save(update_fields=[
+                                "parse_status",
+                                "parse_error",
+                            ])
+                            self.stdout.write(self.style.ERROR(
+                                f"    ошибка парсинга: {exc}"
+                            ))
+                    else:
+                        self.stdout.write(self.style.WARNING(
+                            "    template_parser не найден — "
+                            "placeholders не заполнены"
+                        ))
                 else:
                     self.stdout.write(self.style.WARNING(
                         f"    файл не найден: {src}"
@@ -212,5 +275,3 @@ class Command(BaseCommand):
 
             mark = "+" if created else "~"
             self.stdout.write(f"  [{mark}] {tpl['name']}")
-
-        self.stdout.write(self.style.SUCCESS("\nГотово."))
