@@ -3,35 +3,45 @@
 
 {% block title %}Документы — Панель{% endblock %}
 
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/dashboard/documents_list.css' %}">
+{% endblock %}
+
 {% block dashboard_content %}
 <div class="dashboard-home">
 
-  <div class="dashboard-header">
-    <h1>{{ page_title }}</h1>
-    <p class="dashboard-subtitle">{{ page_subtitle }}</p>
-  </div>
+  <!-- ── Заголовок и действия ── -->
+  <div class="docs-top">
+    <div class="docs-top-text">
+      <h1>{{ page_title }}</h1>
+      <p>{{ page_subtitle }}</p>
+    </div>
 
-  <div class="dashboard-actions">
-    <a href="{% url 'documents:step1' %}" class="dashboard-btn dashboard-btn-primary">
-      <i class="bi bi-plus-lg"></i>
-      Создать документ
-    </a>
+    <div class="docs-top-actions">
+      <a href="{% url 'documents:step1' %}"
+         class="dashboard-btn dashboard-btn-primary">
+        <i class="bi bi-plus-lg"></i>
+        Создать документ
+      </a>
 
-    <div class="dashboard-view-toggle" role="group" aria-label="Режим отображения">
-      <button type="button" class="view-toggle-btn is-active"
-              data-view="table" title="Таблица" aria-label="Таблица">
-        <i class="bi bi-list-ul"></i>
-      </button>
-      <button type="button" class="view-toggle-btn"
-              data-view="cards" title="Карточки" aria-label="Карточки">
-        <i class="bi bi-grid-3x3-gap"></i>
-      </button>
+      <div class="dashboard-view-toggle" role="group" aria-label="Режим отображения">
+        <button type="button" class="view-toggle-btn is-active"
+                data-view="table" title="Таблица" aria-label="Таблица">
+          <i class="bi bi-list-ul"></i>
+        </button>
+        <button type="button" class="view-toggle-btn"
+                data-view="cards" title="Карточки" aria-label="Карточки">
+          <i class="bi bi-grid-3x3-gap"></i>
+        </button>
+      </div>
     </div>
   </div>
 
-  <form method="get" class="dashboard-filters">
+  <!-- ── Фильтры ── -->
+  <form method="get" class="docs-filters">
     <label>
-      Статус:
+      <span>Статус:</span>
       <select name="status">
         <option value="">Все</option>
         {% for code, label in status_choices %}
@@ -43,7 +53,7 @@
     </label>
 
     <label>
-      Тип:
+      <span>Тип:</span>
       <select name="type">
         <option value="">Все</option>
         {% for dt in document_types %}
@@ -54,13 +64,21 @@
       </select>
     </label>
 
-    <button type="submit" class="dashboard-btn">Фильтровать</button>
-    <a href="{% url 'dashboard:documents' %}" class="dashboard-btn">Сбросить</a>
+    <div class="docs-filters-actions">
+      <button type="submit" class="dashboard-btn">
+        <i class="bi bi-funnel"></i> Фильтровать
+      </button>
+      <a href="{% url 'dashboard:documents' %}" class="dashboard-btn">
+        Сбросить
+      </a>
+    </div>
   </form>
 
   {% if documents %}
 
     <div class="docs-view" data-view="table" id="docsView">
+
+      <!-- ── Табличный вид ── -->
       <div class="docs-table-wrap">
         <table class="dashboard-table dashboard-table--clickable">
           <thead>
@@ -85,8 +103,12 @@
                 <td>{{ doc.created_at|date:"d.m.Y H:i" }}</td>
                 <td class="dashboard-table-actions">
                   <a href="{% url 'dashboard:document_delete' doc.pk %}"
-                     class="danger"
-                     data-no-row-click>Удалить</a>
+                     class="doc-delete-btn"
+                     data-no-row-click
+                     title="Удалить документ">
+                    <i class="bi bi-trash"></i>
+                    <span class="doc-delete-label">Удалить</span>
+                  </a>
                 </td>
               </tr>
             {% endfor %}
@@ -94,40 +116,75 @@
         </table>
       </div>
 
+      <!-- ── Карточный вид ── -->
       <div class="docs-cards">
         {% for doc in documents %}
-          <a href="{% url 'dashboard:document_detail' doc.pk %}" class="doc-card-item">
-            <div class="doc-card-head">
-              <span class="doc-card-id"></span>
-              <span class="status status-{{ doc.status }}">
-                {{ doc.get_status_display }}
-              </span>
+          <div class="doc-card-item">
+            <a href="{% url 'dashboard:document_detail' doc.pk %}"
+               class="doc-card-main">
+              <div class="doc-card-head">
+                <span class="doc-card-id"></span>
+                <span class="status status-{{ doc.status }}">
+                  {{ doc.get_status_display }}
+                </span>
+              </div>
+              <div class="doc-card-title">{{ doc.document_type.name }}</div>
+              <div class="doc-card-sub">{{ doc.template.name }}</div>
+              <div class="doc-card-date">
+                <i class="bi bi-clock"></i> {{ doc.created_at|date:"d.m.Y H:i" }}
+              </div>
+            </a>
+
+            <div class="doc-card-actions">
+              <a href="{% url 'dashboard:document_delete' doc.pk %}"
+                 class="doc-delete-btn"
+                 title="Удалить документ">
+                <i class="bi bi-trash"></i>
+                <span>Удалить</span>
+              </a>
             </div>
-            <div class="doc-card-title">{{ doc.document_type.name }}</div>
-            <div class="doc-card-sub">{{ doc.template.name }}</div>
-            <div class="doc-card-date">
-              <i class="bi bi-clock"></i> {{ doc.created_at|date:"d.m.Y H:i" }}
-            </div>
-          </a>
+          </div>
         {% endfor %}
       </div>
 
     </div>
 
+    <!-- ── Пагинация ── -->
     {% if is_paginated %}
-      <div class="dashboard-pagination">
+      <div class="docs-pagination">
         {% if page_obj.has_previous %}
-          <a href="?page={{ page_obj.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}">← Назад</a>
+          <a href="?page={{ page_obj.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}">
+            <i class="bi bi-chevron-left"></i>
+            Назад
+          </a>
         {% endif %}
-        <span>Стр. {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+
+        <span class="docs-pagination-info">
+          Стр. {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
+        </span>
+
         {% if page_obj.has_next %}
-          <a href="?page={{ page_obj.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}">Вперёд →</a>
+          <a href="?page={{ page_obj.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}">
+            Вперёд
+            <i class="bi bi-chevron-right"></i>
+          </a>
         {% endif %}
       </div>
     {% endif %}
 
   {% else %}
-    <p class="dashboard-muted">Пока нет ни одного документа. Начните с кнопки «Создать документ».</p>
+
+    <div class="docs-empty">
+      <i class="bi bi-inbox"></i>
+      <p>Пока нет ни одного документа.<br>
+         Начните с кнопки «Создать документ».</p>
+      <a href="{% url 'documents:step1' %}"
+         class="dashboard-btn dashboard-btn-primary">
+        <i class="bi bi-plus-lg"></i>
+        Создать документ
+      </a>
+    </div>
+
   {% endif %}
 
 </div>
@@ -137,6 +194,9 @@
   const STORAGE_KEY = 'docsViewMode';
   const viewRoot = document.getElementById('docsView');
   const toggleBtns = document.querySelectorAll('.view-toggle-btn');
+
+  // На мобильных переключатель не нужен
+  const isMobile = () => window.innerWidth <= 720;
 
   if (!viewRoot || !toggleBtns.length) return;
 
@@ -148,7 +208,6 @@
     try { localStorage.setItem(STORAGE_KEY, mode); } catch (e) {}
   }
 
-  // Восстанавливаем выбор
   let saved = 'table';
   try { saved = localStorage.getItem(STORAGE_KEY) || 'table'; } catch (e) {}
   setView(saved);
