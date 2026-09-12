@@ -238,14 +238,7 @@ class Command(BaseCommand):
                     # --- Парсинг плейсхолдеров ---
                     if parse_template is not None:
                         try:
-                            provider = None
-                            if pick_gigachat_provider:
-                                provider = pick_gigachat_provider()
-                            if not provider and pick_openai_provider:
-                                provider = pick_openai_provider()
-                            placeholders, error = parse_template(
-                                obj.docx_template, provider,
-                            )
+                            placeholders, error = parse_template(obj.docx_template, provider=None)
                             obj.placeholders = placeholders
                             obj.parse_status = "error" if error else "ready"
                             obj.parse_error = error or ""
