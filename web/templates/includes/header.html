@@ -12,7 +12,6 @@
       <nav class="d-none d-md-flex align-items-center gap-1 main-nav">
         <a href="{% url 'homepage:home' %}" class="nav-link {% if request.resolver_match.view_name == 'homepage:home' %}active{% endif %}">Главная</a>
         <a href="{% url 'about:about' %}" class="nav-link {% if request.resolver_match.view_name == 'about:about' %}active{% endif %}">О нас</a>
-        <a href="{% url 'homepage:calendar' %}" class="nav-link {% if request.resolver_match.view_name == 'homepage:calendar' %}active{% endif %}">Календарь</a>
         <a href="{% url 'news:list' %}" class="nav-link {% if request.resolver_match.view_name == 'news:list' %}active{% endif %}">Новости</a>
       </nav>
 
@@ -36,11 +35,6 @@
             <li>
               <a href="{% url 'about:about' %}" class="dropdown-item d-flex align-items-center gap-2 py-2 rounded-3 {% if request.resolver_match.view_name == 'about:about' %}active{% endif %}">
                 <i class="bi bi-info-circle fs-6"></i> О нас
-              </a>
-            </li>
-            <li>
-              <a href="{% url 'homepage:calendar' %}" class="dropdown-item d-flex align-items-center gap-2 py-2 rounded-3 {% if request.resolver_match.view_name == 'homepage:calendar' %}active{% endif %}">
-                <i class="bi bi-calendar-event fs-6"></i> Календарь
               </a>
             </li>
             <li>

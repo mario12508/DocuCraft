@@ -4,17 +4,18 @@
 
 ## Оглавление
 
-1. [Переменные окружения (.env)](#переменные-окружения-env)  
-   - [1. Основные настройки Django](#1-основные-настройки-django)  
-   - [2. Автоматическое создание суперпользователя (для Docker)](#2-автоматическое-создание-суперпользователя-для-docker)  
-   - [3. Режимы работы базы данных (DB_MODE)](#3-режимы-работы-базы-данных-db_mode)  
-   - [4. Хранилище медиа-файлов (USE_S3_MEDIA)](#4-хранилище-медиа-файлов-use_s3_media)  
-   - [5. Email-уведомления (Resend)](#5-email-уведомления-resend)  
-   - [6. Интеграция с OAuth2-провайдерами](#6-интеграция-с-oauth2-провайдерами)  
-2. [Инструкции по запуску](#инструкции-по-запуску)  
-   - [💻 Сценарий 1: Локальная разработка (SQLite, без Docker)](#сценарий-1-локальная-разработка-sqlite-без-docker)  
-   - [🐳 Сценарий 2: Локальный запуск в Docker (PostgreSQL)](#сценарий-2-локальный-запуск-в-docker-postgresql)  
-   - [☁️ Сценарий 3: Деплой на Render (внешняя БД и Yandex S3)](#сценарий-3-деплой-на-render-внешняя-бд-и-yandex-s3)  
+1. [Переменные окружения (.env)](#переменные-окружения-env)
+   - [1. Основные настройки Django](#1-основные-настройки-django)
+   - [2. Автоматическое создание суперпользователя (для Docker)](#2-автоматическое-создание-суперпользователя-для-docker)
+   - [3. Режимы работы базы данных (DB_MODE)](#3-режимы-работы-базы-данных-db_mode)
+   - [4. Хранилище медиа-файлов (USE_S3_MEDIA)](#4-хранилище-медиа-файлов-use_s3_media)
+   - [5. Email-уведомления (Resend)](#5-email-уведомления-resend)
+   - [6. Интеграция с OAuth2-провайдерами](#6-интеграция-с-oauth2-провайдерами)
+   - [7. ИИ-провайдеры для обработки документов](#7-ии-провайдеры-для-обработки-документов)
+2. [Инструкции по запуску](#инструкции-по-запуску)
+   - [💻 Сценарий 1: Локальная разработка (SQLite, без Docker)](#сценарий-1-локальная-разработка-sqlite-без-docker)
+   - [🐳 Сценарий 2: Локальный запуск в Docker (PostgreSQL)](#сценарий-2-локальный-запуск-в-docker-postgresql)
+   - [☁️ Сценарий 3: Деплой на Render (внешняя БД и Yandex S3)](#сценарий-3-деплой-на-render-внешняя-бд-и-yandex-s3)
 3. [Дополнительные замечания](#дополнительные-замечания)
 
 ---
@@ -106,13 +107,33 @@
 
 [🔝 Наверх](#установка-и-конфигурация-окружения-env)
 
+### 7. ИИ-провайдеры для обработки документов
+
+Для работы сервиса нужен **минимум один** ключ. Рекомендуется заполнить несколько — в коде работает fallback-цепочка: если один провайдер недоступен, запрос автоматически уходит к следующему.
+
+| Переменная             | Тип       | По умолчанию | Описание                                                                                              |
+|:-----------------------|:----------|:-------------|:------------------------------------------------------------------------------------------------------|
+| `GIGACHAT_AUTH_KEY`    | `string`  | —            | Authorization key GigaChat (Сбер). Работает из РФ без VPN, бесплатный лимит. Рекомендуется как основной. |
+| `GROQ_API_KEY`         | `string`  | —            | Ключ Groq. Быстрые модели, но может требоваться VPN.                                                  |
+| `GEMINI_API_KEY`       | `string`  | —            | Ключ Google Gemini. Может требовать VPN.                                                              |
+| `OPENROUTER_API_KEY`   | `string`  | —            | Ключ OpenRouter для доступа к бесплатным моделям `:free`.                                             |
+
+#### Где получить ключи
+
+- **GigaChat** — [developers.sber.ru](https://developers.sber.ru) → «Мои приложения» → скопировать `Authorization key`. Работает без VPN.
+- **Groq** — [console.groq.com/keys](https://console.groq.com/keys).
+- **Google Gemini** — [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey).
+- **OpenRouter** — [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys).
+
+[🔝 Наверх](#установка-и-конфигурация-окружения-env)
+
 ---
 
 ## Инструкции по запуску
 
 Склонируйте репозиторий
 ```bash
-git clone https://gitverse.ru/hackrus.experts/cempionat-fsp-2026_it_miks_39
+git clone https://github.com/mario12508/DocuCraft.git
 ```
 
 ### Сценарий 1: Локальная разработка (SQLite, без Docker)
@@ -169,16 +190,24 @@ git clone https://gitverse.ru/hackrus.experts/cempionat-fsp-2026_it_miks_39
 
    GOOGLE_OAUTH2_KEY=your_google_key
    GOOGLE_OAUTH2_SECRET=your_google_secret
+
+   # ИИ-провайдеры (минимум один, рекомендуется — GigaChat)
+   GIGACHAT_AUTH_KEY=your_gigachat_auth_key
+   GROQ_API_KEY=your_groq_api_key
+   GEMINI_API_KEY=your_gemini_api_key
+   OPENROUTER_API_KEY=your_openrouter_api_key
    ```
 
 4. **Выполните миграции и запустите сервер:**
    ```bash
    python web/manage.py migrate
    python web/manage.py createsuperuser
-   python web/manage.py seed_initial   
+   python web/manage.py seed_initial
    python web/manage.py runserver
    ```
    Сайт будет доступен по адресу `http://127.0.0.1:8000/`.
+
+   Команда `seed_initial` создаёт базовые типы документов (служебная записка, докладная записка, информационная справка, письмо), два системных шаблона оформления и привязывает к ним плейсхолдеры.
 
 </details>
 
@@ -202,7 +231,7 @@ git clone https://gitverse.ru/hackrus.experts/cempionat-fsp-2026_it_miks_39
    DB_HOST=db
    DB_PORT=5432
    ```
-   Остальные переменные – по желанию.
+   Остальные переменные – по желанию. Не забудьте заполнить ключи ИИ-провайдеров.
 
 2. **Соберите и запустите контейнеры:**
    ```bash
@@ -212,6 +241,7 @@ git clone https://gitverse.ru/hackrus.experts/cempionat-fsp-2026_it_miks_39
 3. **Что произойдет автоматически:**
    - Поднимется PostgreSQL и дождется его готовности.
    - Автоматически выполнятся `collectstatic` и `migrate`.
+   - Выполнится `seed_initial` — создадутся типы документов и шаблоны.
    - Загрузятся фикстуры (если есть в `web/fixtures/`).
    - Создастся суперпользователь с данными из переменных окружения.
 
@@ -262,6 +292,12 @@ git clone https://gitverse.ru/hackrus.experts/cempionat-fsp-2026_it_miks_39
    GITHUB_OAUTH2_SECRET=your_github_secret
    GOOGLE_OAUTH2_KEY=your_google_key
    GOOGLE_OAUTH2_SECRET=your_google_secret
+
+   # ИИ-провайдеры (минимум один)
+   GIGACHAT_AUTH_KEY=your_gigachat_auth_key
+   GROQ_API_KEY=your_groq_api_key
+   GEMINI_API_KEY=your_gemini_api_key
+   OPENROUTER_API_KEY=your_openrouter_api_key
    ```
 
 3. **Готово!**
@@ -279,6 +315,8 @@ git clone https://gitverse.ru/hackrus.experts/cempionat-fsp-2026_it_miks_39
 - При использовании внешней БД убедитесь, что она доступна из сети Render.
 - Для production-окружения всегда устанавливайте `DJANGO_DEBUG=False` и задавайте корректные `DJANGO_ALLOWED_HOSTS`.
 - Почтовые уведомления через Resend требуют подтверждённого домена отправителя.
+- **ИИ-провайдеры.** Достаточно одного ключа, но для устойчивости рекомендуется заполнить несколько. Приоритет в fallback-цепочке: GigaChat → Groq → Gemini → OpenRouter. Если все недоступны, черновик сохраняется, а пользователю предлагается повторить обработку.
+- **Ключи ИИ не храните в репозитории.** Файл `.env` должен быть в `.gitignore`.
 
 [🔝 Наверх](#установка-и-конфигурация-окружения-env)
 

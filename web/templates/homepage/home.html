@@ -5,170 +5,163 @@
 
 {% block extra_css %}
   {{ block.super }}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="{% static 'css/homepage/home.css' %}">
 {% endblock %}
 
 {% block content %}
 
-<!-- ─────────────────────────────  HERO  ───────────────────────────── -->
-<section class="hp-hero">
+<div class="hp-root">
   <div class="hp-container">
-    <div class="hp-hero-inner">
-      <span class="hp-badge">
-        <i class="bi bi-stars"></i>
-        ИИ-конструктор служебных документов
-      </span>
 
-      <h1 class="hp-hero-title">
-        Черновик&nbsp;— в готовый<br>
-        <span class="hp-accent">официальный документ</span>
+    <!-- ══════════════════  HERO  ══════════════════ -->
+    <section class="hp-hero">
+
+      <span class="hp-watermark" aria-hidden="true">3</span>
+
+      <div class="hp-kicker">
+        <span class="hp-mono">DocuCraft</span>
+        <span class="hp-kicker-sep">/</span>
+        <span class="hp-kicker-dot"></span>
+        <span>ИИ-конструктор служебных документов</span>
+      </div>
+
+      <h1 class="hp-title">
+        Черновик&nbsp;— в готовый <em>официальный документ</em><br>
+        за три шага
       </h1>
 
-      <p class="hp-hero-subtitle">
-        DocuCraft приводит текст к деловому стилю, проверяет реквизиты
-        и собирает редактируемый DOCX по правилам вашего шаблона —
-        за три шага, без Word и без ручной вёрстки.
-      </p>
+      <div class="hp-hero-grid">
+        <p class="hp-lead">
+          Приводим текст к деловому стилю, проверяем реквизиты
+          и собираем редактируемый DOCX по правилам вашего шаблона.
+          Без Word и ручной вёрстки.
+        </p>
 
-      <div class="hp-hero-actions">
-        <a href="{% url 'documents:step1' %}" class="hp-btn hp-btn-primary">
-          <i class="bi bi-magic"></i>
+        <div class="hp-hero-actions">
+          <a href="{% url 'documents:step1' %}" class="hp-btn hp-btn-primary">
+            Создать документ
+            <span class="hp-btn-arrow">→</span>
+          </a>
+          <a href="{% url 'dashboard:home' %}" class="hp-btn">
+            Открыть панель
+          </a>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ══════════════════  ТРИ ШАГА  ══════════════════ -->
+    <section class="hp-section hp-reveal">
+      <div class="hp-section-head">
+        <span class="hp-section-num hp-mono">/ 01</span>
+        <h2>Документ за три шага</h2>
+      </div>
+
+      <div class="hp-steps">
+        <div class="hp-step">
+          <span class="hp-step-num hp-mono">01</span>
+          <h3>Ввод текста</h3>
+          <p>Вставьте черновик как есть — с опечатками и разговорными
+             оборотами. Система сама приведёт его к деловому стилю.</p>
+        </div>
+        <div class="hp-step">
+          <span class="hp-step-num hp-mono">02</span>
+          <h3>Тип и шаблон</h3>
+          <p>Тип определяет структуру и реквизиты. Шаблон — только
+             оформление: поля, шрифт, интервал, отступы.</p>
+        </div>
+        <div class="hp-step">
+          <span class="hp-step-num hp-mono">03</span>
+          <h3>Готовый DOCX</h3>
+          <p>Файл открывается в Microsoft Word, полностью редактируем,
+             корректно отображает кириллицу.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════  ВОЗМОЖНОСТИ  ══════════════════ -->
+    <section class="hp-section hp-reveal">
+      <div class="hp-section-head">
+        <span class="hp-section-num hp-mono">/ 02</span>
+        <h2>Что умеет DocuCraft</h2>
+      </div>
+
+      <div class="hp-features">
+        <div class="hp-feature">
+          <h3>Орфография и стиль</h3>
+          <p>Исправляем ошибки, убираем просторечия и канцелярит.</p>
+        </div>
+        <div class="hp-feature">
+          <h3>Никаких выдумок</h3>
+          <p>ИИ не добавляет факты, даты и ФИО, которых не было в тексте.</p>
+        </div>
+        <div class="hp-feature">
+          <h3>Контроль реквизитов</h3>
+          <p>Проверяем обязательные поля. Незаполненные помечаются в файле.</p>
+        </div>
+        <div class="hp-feature">
+          <h3>Программная вёрстка</h3>
+          <p>Оформление задаётся шаблоном, а не моделью.</p>
+        </div>
+        <div class="hp-feature">
+          <h3>Предпросмотр и правки</h3>
+          <p>Можно отредактировать текст руками перед скачиванием.</p>
+        </div>
+        <div class="hp-feature">
+          <h3>Устойчивость к сбоям</h3>
+          <p>Если один ИИ-провайдер недоступен — переключаемся на следующий.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════  ТИПЫ + CTA  ══════════════════ -->
+    <section class="hp-section hp-reveal">
+      <div class="hp-section-head">
+        <span class="hp-section-num hp-mono">/ 03</span>
+        <h2>Поддерживаемые типы</h2>
+      </div>
+
+      <div class="hp-types">
+        <span class="hp-type">Служебная записка</span>
+        <span class="hp-type">Докладная записка</span>
+        <span class="hp-type">Информационная справка</span>
+        <span class="hp-type">Письмо</span>
+      </div>
+
+      <div class="hp-cta">
+        <p class="hp-cta-text">
+          Вставьте черновик&nbsp;— <em>остальное сделает DocuCraft</em>
+        </p>
+        <a href="{% url 'documents:step1' %}" class="hp-btn hp-btn-primary hp-btn-lg">
           Создать документ
-        </a>
-        <a href="{% url 'dashboard:home' %}" class="hp-btn">
-          <i class="bi bi-grid"></i>
-          Открыть панель
+          <span class="hp-btn-arrow">→</span>
         </a>
       </div>
+    </section>
 
-      <div class="hp-hero-meta">
-        <span><i class="bi bi-check2"></i> 4 типа документов</span>
-        <span><i class="bi bi-check2"></i> 2 шаблона оформления</span>
-        <span><i class="bi bi-check2"></i> Экспорт в DOCX и PDF</span>
-      </div>
-    </div>
   </div>
-</section>
+</div>
 
-<!-- ───────────────────────────  ТРИ ШАГА  ─────────────────────────── -->
-<section class="hp-section hp-steps">
-  <div class="hp-container">
-    <div class="hp-section-head">
-      <h2>Документ за 3 шага</h2>
-      <p>Понятный сценарий — без обучения и инструкций.</p>
-    </div>
+<script>
+(function () {
+  // Fade-in секций при скролле
+  const items = document.querySelectorAll('.hp-reveal');
+  if (!items.length || !('IntersectionObserver' in window)) return;
 
-    <div class="hp-steps-grid">
-      <div class="hp-step-card">
-        <div class="hp-step-num">1</div>
-        <h3>Ввод текста</h3>
-        <p>Вставьте черновик как есть — с опечатками, разговорными оборотами, без структуры.</p>
-      </div>
-      <div class="hp-step-card">
-        <div class="hp-step-num">2</div>
-        <h3>Тип и шаблон</h3>
-        <p>Выберите тип документа и оформление организации. Содержание и стиль разделены.</p>
-      </div>
-      <div class="hp-step-card">
-        <div class="hp-step-num">3</div>
-        <h3>Готовый DOCX</h3>
-        <p>ИИ приводит текст к деловому стилю, шаблон применяет правила, файл можно скачать.</p>
-      </div>
-    </div>
-  </div>
-</section>
+  const io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('hp-reveal--visible');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
 
-<!-- ──────────────────────────  ВОЗМОЖНОСТИ  ────────────────────────── -->
-<section class="hp-section hp-features">
-  <div class="hp-container">
-    <div class="hp-section-head">
-      <h2>Что умеет DocuCraft</h2>
-      <p>Ключевая ценность — в автоматике там, где раньше был ручной труд.</p>
-    </div>
-
-    <div class="hp-features-grid">
-      <article class="hp-feature">
-        <div class="hp-feature-icon">
-          <i class="bi bi-spellcheck"></i>
-        </div>
-        <h3>Орфография и стиль</h3>
-        <p>Исправляем ошибки, убираем просторечия и канцелярит, приводим формулировки к деловому стилю.</p>
-      </article>
-
-      <article class="hp-feature">
-        <div class="hp-feature-icon">
-          <i class="bi bi-shield-check"></i>
-        </div>
-        <h3>Никаких выдумок</h3>
-        <p>ИИ не добавляет факты, даты и ФИО, которых не было в черновике. Смысл сохраняется.</p>
-      </article>
-
-      <article class="hp-feature">
-        <div class="hp-feature-icon">
-          <i class="bi bi-list-check"></i>
-        </div>
-        <h3>Контроль реквизитов</h3>
-        <p>Проверяем обязательные поля по типу документа. Незаполненные явно помечаются в итоговом файле.</p>
-      </article>
-
-      <article class="hp-feature">
-        <div class="hp-feature-icon">
-          <i class="bi bi-file-earmark-word"></i>
-        </div>
-        <h3>Программная вёрстка</h3>
-        <p>Оформление задаётся шаблоном, а не ИИ: поля, шрифты, интервалы, отступы, колонтитулы.</p>
-      </article>
-
-      <article class="hp-feature">
-        <div class="hp-feature-icon">
-          <i class="bi bi-pencil-square"></i>
-        </div>
-        <h3>Предпросмотр</h3>
-        <p>Перед скачиванием можно отредактировать текст руками и заполнить недостающие реквизиты.</p>
-      </article>
-
-      <article class="hp-feature">
-        <div class="hp-feature-icon">
-          <i class="bi bi-arrow-repeat"></i>
-        </div>
-        <h3>Устойчив к сбоям</h3>
-        <p>Если один ИИ-провайдер недоступен — переключаемся на следующий. Черновик не теряется.</p>
-      </article>
-    </div>
-  </div>
-</section>
-
-<!-- ──────────────────────────  ТИПЫ ДОКУМЕНТОВ  ────────────────────────── -->
-<section class="hp-section hp-doctypes">
-  <div class="hp-container">
-    <div class="hp-section-head">
-      <h2>Поддерживаемые типы</h2>
-      <p>Для каждого типа — свой набор обязательных реквизитов и структура.</p>
-    </div>
-
-    <div class="hp-chips">
-      <span class="hp-chip">Служебная записка</span>
-      <span class="hp-chip">Докладная записка</span>
-      <span class="hp-chip">Информационная справка</span>
-      <span class="hp-chip">Письмо</span>
-    </div>
-  </div>
-</section>
-
-<!-- ─────────────────────────────  CTA  ───────────────────────────── -->
-<section class="hp-cta">
-  <div class="hp-container">
-    <div class="hp-cta-card">
-      <div class="hp-cta-text">
-        <h2>Готовы попробовать?</h2>
-        <p>Вставьте черновик — остальное сделает DocuCraft.</p>
-      </div>
-      <a href="{% url 'documents:step1' %}" class="hp-btn hp-btn-primary hp-btn-lg">
-        <i class="bi bi-magic"></i>
-        Создать документ
-      </a>
-    </div>
-  </div>
-</section>
+  items.forEach(function (el) { io.observe(el); });
+})();
+</script>
 
 {% endblock %}
