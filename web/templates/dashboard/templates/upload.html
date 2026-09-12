@@ -3,83 +3,133 @@
 
 {% block title %}Загрузить шаблон — Панель{% endblock %}
 
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/dashboard/upload.css' %}">
+{% endblock %}
+
 {% block dashboard_content %}
-<div class="dashboard-home">
+<div class="tpl-upload">
 
-  <div class="dashboard-header">
-    <h1>{{ page_title }}</h1>
-    <p class="dashboard-subtitle">{{ page_subtitle }}</p>
-  </div>
+  <header class="tpl-upload-head">
+    <h1>Загрузить шаблон</h1>
+    <p>
+      Word-документ с плейсхолдерами вида <code>[Кому]</code>,
+      <code>[Дата]</code>, <code>[Текст документа]</code>. После загрузки
+      система найдёт их и покажет список для проверки.
+    </p>
+  </header>
 
-  <form method="post" enctype="multipart/form-data" class="dashboard-form"
-        style="max-width: 640px;" id="templateUploadForm">
+  <form method="post" enctype="multipart/form-data"
+        class="tpl-upload-grid" id="tplUploadForm">
 
     {% csrf_token %}
 
-    <div class="dashboard-form-field">
-      <label for="id_name">Название шаблона</label>
-      <input type="text" id="id_name" name="name" required maxlength="100"
-             placeholder="Например: Шаблон отдела кадров">
-      <div class="dashboard-form-help">
-        Это название увидят пользователи при выборе шаблона.
-      </div>
-    </div>
+    <!-- ── Основная форма ── -->
+    <div class="tpl-upload-main">
 
-    <div class="dashboard-form-field">
-      <label for="id_description">Описание (необязательно)</label>
-      <textarea id="id_description" name="description" rows="3"
-                placeholder="Кратко опишите, для каких документов подходит шаблон"></textarea>
-    </div>
-
-    {# ── Кастомная загрузка файла ── #}
-    <div class="dashboard-form-field">
-      <label>Файл .docx</label>
-
-      <label for="id_file" class="file-drop" id="fileDrop">
-        <input type="file" id="id_file" name="file" accept=".docx" required
-               hidden>
-
-        {# Состояние: пусто #}
-        <div class="file-drop-empty" id="fileDropEmpty">
-          <i class="bi bi-cloud-arrow-up file-drop-icon"></i>
-          <div class="file-drop-title">
-            Перетащите файл сюда или <span class="file-drop-link">выберите</span>
-          </div>
-          <div class="file-drop-hint">
-            Поддерживается только <code>.docx</code>, до 5 МБ
-          </div>
+      <div class="tpl-upload-field">
+        <label for="id_name">
+          Название шаблона<span class="tpl-req">*</span>
+        </label>
+        <input type="text" id="id_name" name="name" required maxlength="100"
+               placeholder="Например: Шаблон отдела кадров"
+               class="tpl-upload-input" autocomplete="off">
+        <div class="tpl-upload-help">
+          Это название увидят пользователи при выборе шаблона.
         </div>
-
-        {# Состояние: файл выбран #}
-        <div class="file-drop-filled" id="fileDropFilled" hidden>
-          <i class="bi bi-file-earmark-word file-drop-filled-icon"></i>
-          <div class="file-drop-filled-info">
-            <div class="file-drop-filled-name" id="fileName"></div>
-            <div class="file-drop-filled-size" id="fileSize"></div>
-          </div>
-          <button type="button" class="file-drop-remove" id="fileRemove"
-                  aria-label="Убрать файл">
-            <i class="bi bi-x-lg"></i>
-          </button>
-        </div>
-      </label>
-
-      <div class="dashboard-form-help">
-        Загрузите Word-файл, в котором вместо значений стоят плейсхолдеры
-        вида <code>[Кому]</code>, <code>[Дата]</code>,
-        <code>[Текст документа]</code> и т.п.
-        После загрузки система сама найдёт их и покажет список.
       </div>
+
+      <div class="tpl-upload-field">
+        <label for="id_description">Описание</label>
+        <textarea id="id_description" name="description" rows="3"
+                  placeholder="Кратко опишите, для каких документов подходит шаблон"
+                  class="tpl-upload-textarea"></textarea>
+      </div>
+
+      <div class="tpl-upload-field">
+        <label>
+          Файл .docx<span class="tpl-req">*</span>
+        </label>
+
+        <label for="id_file" class="tpl-drop" id="tplDrop">
+          <input type="file" id="id_file" name="file" accept=".docx"
+                 required hidden>
+
+          <div id="tplDropEmpty">
+            <i class="bi bi-cloud-arrow-up tpl-drop-icon"></i>
+            <div class="tpl-drop-title">
+              Перетащите файл сюда или
+              <span class="tpl-drop-link">выберите</span>
+            </div>
+            <div class="tpl-drop-hint">
+              Только <code>.docx</code>, до 5 МБ
+            </div>
+          </div>
+
+          <div id="tplDropFilled" class="tpl-drop-filled" hidden>
+            <i class="bi bi-file-earmark-word tpl-drop-filled-icon"></i>
+            <div class="tpl-drop-filled-info">
+              <div class="tpl-drop-filled-name" id="tplFileName"></div>
+              <div class="tpl-drop-filled-size" id="tplFileSize"></div>
+            </div>
+            <button type="button" class="tpl-drop-remove" id="tplFileRemove"
+                    aria-label="Убрать файл">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+        </label>
+
+        <div class="tpl-upload-help">
+          Плейсхолдеры пишутся прямо в документе Word — на месте,
+          где должно появиться значение.
+        </div>
+      </div>
+
+      <div class="tpl-upload-actions">
+        <a href="{% url 'dashboard:templates' %}" class="dashboard-btn">
+          <i class="bi bi-arrow-left"></i> Отмена
+        </a>
+        <button type="submit" class="dashboard-btn dashboard-btn-primary"
+                id="tplSubmitBtn">
+          <i class="bi bi-upload"></i> Загрузить и распарсить
+        </button>
+      </div>
+
     </div>
 
-    <div class="dashboard-actions">
-      <a href="{% url 'dashboard:templates' %}" class="dashboard-btn">
-        <i class="bi bi-arrow-left"></i> Отмена
-      </a>
-      <button type="submit" class="dashboard-btn dashboard-btn-primary">
-        <i class="bi bi-upload"></i> Загрузить и распарсить
-      </button>
-    </div>
+    <!-- ── Памятка ── -->
+    <aside class="tpl-upload-aside">
+
+      <div class="tpl-aside-card">
+        <h2>Как подготовить</h2>
+        <ol class="tpl-aside-steps">
+          <li>Создайте документ в Word с нужной вёрсткой, шрифтами и полями.</li>
+          <li>На местах для значений напишите плейсхолдер в квадратных скобках.</li>
+          <li>Сохраните файл в формате <code>.docx</code> и загрузите сюда.</li>
+          <li>Проверьте, что система правильно распознала все плейсхолдеры.</li>
+        </ol>
+      </div>
+
+      <div class="tpl-aside-card">
+        <h2>Поддерживаемые плейсхолдеры</h2>
+        <ul class="tpl-aside-ph">
+          <li><code>[Кому]</code> <span>Адресат</span></li>
+          <li><code>[От кого]</code> <span>Автор</span></li>
+          <li><code>[Дата]</code> <span>Дата</span></li>
+          <li><code>[Номер]</code> <span>Номер</span></li>
+          <li><code>[Заголовок]</code> <span>Тема</span></li>
+          <li><code>[Текст документа]</code> <span>Тело</span></li>
+          <li><code>[Подпись]</code> <span>Подпись</span></li>
+          <li><code>[Организация]</code> <span>Название</span></li>
+        </ul>
+        <p class="tpl-aside-note">
+          Если плейсхолдер нетипичный, система попробует сопоставить его
+          через ИИ и покажет результат для проверки.
+        </p>
+      </div>
+
+    </aside>
 
   </form>
 
@@ -87,15 +137,19 @@
 
 <script>
 (function () {
-  const drop = document.getElementById('fileDrop');
+  const form = document.getElementById('tplUploadForm');
+  const drop = document.getElementById('tplDrop');
   const input = document.getElementById('id_file');
-  const emptyState = document.getElementById('fileDropEmpty');
-  const filledState = document.getElementById('fileDropFilled');
-  const nameEl = document.getElementById('fileName');
-  const sizeEl = document.getElementById('fileSize');
-  const removeBtn = document.getElementById('fileRemove');
+  const emptyState = document.getElementById('tplDropEmpty');
+  const filledState = document.getElementById('tplDropFilled');
+  const nameEl = document.getElementById('tplFileName');
+  const sizeEl = document.getElementById('tplFileSize');
+  const removeBtn = document.getElementById('tplFileRemove');
+  const submitBtn = document.getElementById('tplSubmitBtn');
 
   if (!drop || !input) return;
+
+  const MAX_SIZE = 5 * 1024 * 1024;
 
   function humanSize(bytes) {
     if (bytes < 1024) return bytes + ' Б';
@@ -117,18 +171,22 @@
     drop.classList.add('has-file');
   }
 
-  // Клик по кнопке «выбрать» — открывает диалог
   drop.addEventListener('click', function (e) {
-    if (e.target.closest('#fileRemove')) return;   // не мешаем кнопке удаления
+    if (e.target.closest('#tplFileRemove')) return;
     input.click();
   });
 
-  // Выбор файла через диалог
   input.addEventListener('change', function () {
-    showFile(input.files[0] || null);
+    const file = input.files[0] || null;
+    if (file && file.size > MAX_SIZE) {
+      alert('Файл больше 5 МБ. Загрузите файл меньшего размера.');
+      input.value = '';
+      showFile(null);
+      return;
+    }
+    showFile(file);
   });
 
-  // Drag-and-drop
   ['dragenter', 'dragover'].forEach(function (evt) {
     drop.addEventListener(evt, function (e) {
       e.preventDefault();
@@ -144,32 +202,39 @@
   });
 
   drop.addEventListener('drop', function (e) {
-    e.preventDefault();
-    const files = e.dataTransfer.files;
+    const files = e.dataTransfer && e.dataTransfer.files;
     if (!files || !files.length) return;
 
-    // Проверяем расширение
     const file = files[0];
     if (!file.name.toLowerCase().endsWith('.docx')) {
       alert('Поддерживаются только файлы .docx');
       return;
     }
+    if (file.size > MAX_SIZE) {
+      alert('Файл больше 5 МБ. Загрузите файл меньшего размера.');
+      return;
+    }
 
-    // Кладём файл в input
     const dt = new DataTransfer();
     dt.items.add(file);
     input.files = dt.files;
-
     showFile(file);
   });
 
-  // Кнопка удаления
   removeBtn.addEventListener('click', function (e) {
     e.preventDefault();
     e.stopPropagation();
     input.value = '';
     showFile(null);
   });
+
+  form.addEventListener('submit', function () {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Обработка…';
+    }
+  });
 })();
 </script>
+
 {% endblock %}

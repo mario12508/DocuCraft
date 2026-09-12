@@ -1,0 +1,434 @@
+.tpl-upload {
+max-width: 1120px;
+margin: 0 auto;
+display: flex;
+flex-direction: column;
+gap: 28px;
+}
+
+.tpl-upload-head h1 {
+font-size: 28px;
+font-weight: 700;
+letter-spacing: -0.02em;
+margin: 0 0 8px;
+color: var(--text-primary);
+}
+
+.tpl-upload-head p {
+font-size: 14px;
+color: var(--text-secondary);
+margin: 0;
+max-width: 720px;
+line-height: 1.6;
+}
+
+.tpl-upload-head code {
+font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+font-size: 12.5px;
+padding: 2px 6px;
+border-radius: 5px;
+background: var(--bg-hover);
+color: var(--text-primary);
+}
+
+.tpl-upload-grid {
+display: grid;
+grid-template-columns: minmax(0, 1fr) 340px;
+gap: 28px;
+align-items: start;
+}
+
+.tpl-upload-main {
+display: flex;
+flex-direction: column;
+gap: 22px;
+padding: 28px 28px 24px;
+border-radius: 16px;
+border: 1px solid var(--border-color);
+background: var(--bg-sidebar);
+}
+
+.tpl-upload-field {
+display: flex;
+flex-direction: column;
+gap: 8px;
+}
+
+.tpl-upload-field > label {
+font-size: 13px;
+font-weight: 600;
+color: var(--text-primary);
+letter-spacing: 0.005em;
+}
+
+.tpl-req {
+color: #c62828;
+margin-left: 3px;
+font-weight: 700;
+}
+
+[data-theme="dark"] .tpl-req { color: #ef9a9a; }
+
+.tpl-upload-input,
+.tpl-upload-textarea {
+width: 100%;
+padding: 11px 14px;
+border-radius: 10px;
+border: 1px solid var(--border-color);
+background: var(--bg-sidebar);
+color: var(--text-primary);
+font-family: inherit;
+font-size: 14px;
+transition: border-color 0.15s ease, box-shadow 0.15s ease;
+box-sizing: border-box;
+}
+
+.tpl-upload-input::placeholder,
+.tpl-upload-textarea::placeholder {
+color: var(--text-muted);
+}
+
+.tpl-upload-input:focus,
+.tpl-upload-textarea:focus {
+outline: none;
+border-color: var(--text-muted);
+box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .tpl-upload-input:focus,
+[data-theme="dark"] .tpl-upload-textarea:focus {
+box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+}
+
+.tpl-upload-textarea {
+resize: vertical;
+min-height: 84px;
+}
+
+.tpl-upload-help {
+font-size: 12px;
+color: var(--text-muted);
+line-height: 1.5;
+}
+
+/* ── Drop-зона ── */
+.tpl-drop {
+position: relative;
+display: block;
+padding: 32px 24px;
+border: 2px dashed var(--border-color);
+border-radius: 14px;
+background: var(--bg-sidebar);
+cursor: pointer;
+text-align: center;
+transition: border-color 0.15s ease, background 0.15s ease,
+            transform 0.12s ease;
+}
+
+.tpl-drop:hover {
+border-color: var(--text-muted);
+background: var(--bg-hover);
+}
+
+.tpl-drop.drag-over {
+border-color: #2563eb;
+background: rgba(37, 99, 235, 0.05);
+}
+
+[data-theme="dark"] .tpl-drop.drag-over {
+border-color: #8ec5ff;
+background: rgba(142, 197, 255, 0.07);
+}
+
+.tpl-drop-icon {
+display: block;
+font-size: 40px;
+color: var(--text-muted);
+margin-bottom: 10px;
+transition: color 0.15s ease, transform 0.2s ease;
+}
+
+.tpl-drop:hover .tpl-drop-icon {
+transform: translateY(-2px);
+}
+
+.tpl-drop.drag-over .tpl-drop-icon {
+color: #2563eb;
+transform: translateY(-4px);
+}
+
+[data-theme="dark"] .tpl-drop.drag-over .tpl-drop-icon {
+color: #8ec5ff;
+}
+
+.tpl-drop-title {
+font-size: 14px;
+font-weight: 500;
+color: var(--text-primary);
+margin-bottom: 6px;
+}
+
+.tpl-drop-link {
+color: #2563eb;
+text-decoration: underline;
+text-underline-offset: 2px;
+}
+
+[data-theme="dark"] .tpl-drop-link {
+color: #8ec5ff;
+}
+
+.tpl-drop-hint {
+font-size: 12px;
+color: var(--text-muted);
+}
+
+.tpl-drop-hint code {
+font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+font-size: 11px;
+padding: 2px 6px;
+border-radius: 4px;
+background: var(--bg-hover);
+color: var(--text-primary);
+}
+
+/* Заполненное состояние */
+.tpl-drop-filled {
+display: flex;
+align-items: center;
+gap: 14px;
+text-align: left;
+}
+
+.tpl-drop-filled-icon {
+font-size: 28px;
+color: #2e7d32;
+flex-shrink: 0;
+}
+
+[data-theme="dark"] .tpl-drop-filled-icon { color: #81c784; }
+
+.tpl-drop-filled-info {
+flex: 1;
+min-width: 0;
+}
+
+.tpl-drop-filled-name {
+font-size: 14px;
+font-weight: 500;
+color: var(--text-primary);
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+}
+
+.tpl-drop-filled-size {
+font-size: 12px;
+color: var(--text-muted);
+margin-top: 2px;
+}
+
+.tpl-drop-remove {
+width: 34px;
+height: 34px;
+border-radius: 8px;
+border: 1px solid var(--border-color);
+background: transparent;
+color: var(--text-secondary);
+cursor: pointer;
+display: flex;
+align-items: center;
+justify-content: center;
+transition: background 0.15s ease, color 0.15s ease,
+            border-color 0.15s ease;
+flex-shrink: 0;
+}
+
+.tpl-drop-remove:hover {
+background: #ffebee;
+color: #c62828;
+border-color: #c62828;
+}
+
+[data-theme="dark"] .tpl-drop-remove:hover {
+background: #4a1e1e;
+color: #ef9a9a;
+border-color: #ef9a9a;
+}
+
+/* Действия */
+.tpl-upload-actions {
+display: flex;
+gap: 10px;
+justify-content: flex-end;
+padding-top: 20px;
+border-top: 1px solid var(--border-color);
+margin-top: 4px;
+}
+
+.tpl-upload-actions .dashboard-btn {
+padding: 11px 20px;
+font-size: 14px;
+transition: background 0.15s ease, border-color 0.15s ease,
+            transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.tpl-upload-actions .dashboard-btn:hover {
+transform: translate(-2px, -2px);
+box-shadow: 3px 3px 0 var(--text-primary);
+}
+
+.tpl-upload-actions .dashboard-btn:active {
+transform: translate(0, 0);
+box-shadow: 0 0 0 var(--text-primary);
+}
+
+[data-theme="dark"] .tpl-upload-actions .dashboard-btn:hover {
+box-shadow: 3px 3px 0 #cfcfcf;
+}
+
+[data-theme="dark"] .tpl-upload-actions .dashboard-btn-primary:hover {
+box-shadow: 3px 3px 0 var(--text-primary);
+}
+
+/* ── Aside ── */
+.tpl-upload-aside {
+display: flex;
+flex-direction: column;
+gap: 16px;
+position: sticky;
+top: 24px;
+}
+
+.tpl-aside-card {
+padding: 20px 22px;
+border-radius: 14px;
+border: 1px solid var(--border-color);
+background: var(--bg-sidebar);
+}
+
+.tpl-aside-card h2 {
+font-size: 12px;
+font-weight: 700;
+color: var(--text-muted);
+margin: 0 0 14px;
+text-transform: uppercase;
+letter-spacing: 0.08em;
+}
+
+/* Шаги */
+.tpl-aside-steps {
+list-style: none;
+padding: 0;
+margin: 0;
+counter-reset: step;
+display: flex;
+flex-direction: column;
+gap: 12px;
+}
+
+.tpl-aside-steps li {
+counter-increment: step;
+font-size: 13px;
+line-height: 1.5;
+color: var(--text-secondary);
+position: relative;
+padding-left: 30px;
+}
+
+.tpl-aside-steps li::before {
+content: counter(step);
+position: absolute;
+left: 0;
+top: 1px;
+width: 20px;
+height: 20px;
+border-radius: 50%;
+background: var(--bg-hover);
+color: var(--text-primary);
+font-size: 11px;
+font-weight: 700;
+display: flex;
+align-items: center;
+justify-content: center;
+line-height: 1;
+}
+
+.tpl-aside-steps li code {
+font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+font-size: 11.5px;
+padding: 1px 5px;
+border-radius: 4px;
+background: var(--bg-hover);
+color: var(--text-primary);
+}
+
+/* Список плейсхолдеров */
+.tpl-aside-ph {
+list-style: none;
+padding: 0;
+margin: 0;
+display: flex;
+flex-direction: column;
+gap: 9px;
+}
+
+.tpl-aside-ph li {
+display: flex;
+justify-content: space-between;
+align-items: baseline;
+gap: 12px;
+font-size: 12.5px;
+color: var(--text-muted);
+}
+
+.tpl-aside-ph code {
+font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+font-size: 11.5px;
+padding: 2px 7px;
+border-radius: 5px;
+background: var(--bg-hover);
+color: var(--text-primary);
+flex-shrink: 0;
+white-space: nowrap;
+}
+
+.tpl-aside-note {
+font-size: 12px;
+line-height: 1.55;
+color: var(--text-muted);
+margin: 14px 0 0;
+padding-top: 14px;
+border-top: 1px solid var(--border-color);
+}
+
+/* ── Адаптив ── */
+@media (max-width: 960px) {
+.tpl-upload-grid {
+  grid-template-columns: 1fr;
+}
+
+.tpl-upload-aside {
+  position: static;
+}
+}
+
+@media (max-width: 520px) {
+.tpl-upload-head h1 { font-size: 22px; }
+
+.tpl-upload-main {
+  padding: 20px 18px 18px;
+}
+
+.tpl-drop { padding: 24px 16px; }
+.tpl-drop-icon { font-size: 32px; }
+
+.tpl-upload-actions {
+  flex-direction: column-reverse;
+}
+
+.tpl-upload-actions .dashboard-btn {
+  width: 100%;
+  justify-content: center;
+}
+}
