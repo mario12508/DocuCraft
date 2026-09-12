@@ -129,6 +129,7 @@ class DocumentAdmin(ModelAdmin):
             obj.docx_file.url,
         )
 
+
 @admin.register(Template)
 class TemplateAdmin(ModelAdmin):
     list_display = ("name", "code", "is_active", "has_docx")
@@ -170,9 +171,7 @@ class TemplateAdmin(ModelAdmin):
     @display(description="Шаблон DOCX")
     def has_docx(self, obj):
         if not obj.docx_template:
-            return format_html(
-                '<span style="color:#9ca3af;">программная сборка</span>'
-            )
+            return format_html('<span style="color:#9ca3af;">программная сборка</span>')
         return format_html(
             '<a href="{}" target="_blank">Скачать</a>',
             obj.docx_template.url,

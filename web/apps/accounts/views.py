@@ -115,8 +115,7 @@ class AuthView(AnonymousRequiredMixin, TemplateView):
                 profile.save()
 
                 verification_link = (
-                    f"{request.scheme}://{request.get_host()}"
-                    f"/auth/verify-email/{token}/"
+                    f"{request.scheme}://{request.get_host()}/auth/verify-email/{token}/"
                 )
                 send_verification_email(user, verification_link)
 
@@ -143,9 +142,7 @@ class VerifyEmailView(View):
             user = profile.user
 
             if profile.email_verification_token_created:
-                time_diff = (
-                    timezone.now() - profile.email_verification_token_created
-                )
+                time_diff = timezone.now() - profile.email_verification_token_created
                 if time_diff.total_seconds() > 86400:  # 24 часа
                     messages.error(
                         request,
@@ -351,11 +348,7 @@ class AdminChatListView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
                 {
                     "user": user,
                     "last_message": last_msg.message[:50] if last_msg else "",
-                    "last_time": (
-                        last_msg.created_at.strftime("%H:%M")
-                        if last_msg
-                        else ""
-                    ),
+                    "last_time": (last_msg.created_at.strftime("%H:%M") if last_msg else ""),
                 },
             )
 
@@ -380,9 +373,7 @@ class AdminChatMessagesAPIView(View):
 
     async def get(self, request, user_id, *args, **kwargs):
         user = await get_user_async(request)
-        if not user.is_authenticated or not (
-            user.is_staff or user.is_superuser
-        ):
+        if not user.is_authenticated or not (user.is_staff or user.is_superuser):
             return JsonResponse({"error": "Forbidden"}, status=403)
 
         last_id = int(request.GET.get("last_id", 0))
@@ -417,9 +408,7 @@ class AdminChatMessagesAPIView(View):
 
     async def post(self, request, user_id, *args, **kwargs):
         user = await get_user_async(request)
-        if not user.is_authenticated or not (
-            user.is_staff or user.is_superuser
-        ):
+        if not user.is_authenticated or not (user.is_staff or user.is_superuser):
             return JsonResponse({"error": "Forbidden"}, status=403)
 
         body = json.loads(request.body)
@@ -686,8 +675,7 @@ class ChangeEmailView(LoginRequiredMixin, TemplateView):
             profile.save()
 
             confirmation_link = (
-                f"{request.scheme}://{request.get_host()}"
-                f"/auth/confirm-email-change/{token}/"
+                f"{request.scheme}://{request.get_host()}/auth/confirm-email-change/{token}/"
             )
             send_email_change_confirmation(
                 request.user,

@@ -22,8 +22,7 @@ def load_draft_categories():
         return []
 
     try:
-        with open(MANIFEST_FILE, encoding="utf-8") as f:
-            manifest = json.load(f)
+        manifest = json.loads(MANIFEST_FILE.read_text(encoding="utf-8"))
     except Exception:
         logger.exception("drafts_loader: не удалось прочитать manifest.json")
         return []
@@ -41,16 +40,20 @@ def load_draft_categories():
             except Exception:
                 logger.exception("drafts_loader: не удалось прочитать %s", path)
                 continue
-            items.append({
-                "label": item.get("label", item["file"]),
-                "quality": item.get("quality", "medium"),
-                "text": text,
-            })
+            items.append(
+                {
+                    "label": item.get("label", item["file"]),
+                    "quality": item.get("quality", "medium"),
+                    "text": text,
+                }
+            )
         if items:
-            result.append({
-                "code": cat.get("code", ""),
-                "title": cat.get("title", ""),
-                "icon": cat.get("icon", "bi-file-text"),
-                "items": items,
-            })
+            result.append(
+                {
+                    "code": cat.get("code", ""),
+                    "title": cat.get("title", ""),
+                    "icon": cat.get("icon", "bi-file-text"),
+                    "items": items,
+                }
+            )
     return result

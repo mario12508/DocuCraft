@@ -2,23 +2,18 @@ __all__ = ()
 
 import re
 
-from django.conf import settings
 from apps.documents.models import Document, DocumentType, Template
+from apps.documents.services.template_parser import parse_template
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import models
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import DeleteView, DetailView, ListView, TemplateView
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, render
-from django.views import View
 
-from apps.documents.models import Document, DocumentType, Template
-from apps.documents.services.ai_processor import pick_provider
-from apps.documents.services.template_parser import parse_template
 
 class Home(LoginRequiredMixin, TemplateView):
     """Главная страница рабочей панели."""
@@ -43,11 +38,7 @@ class DocumentListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        qs = (
-            Document.objects
-            .select_related("document_type", "template")
-            .order_by("-created_at")
-        )
+        qs = Document.objects.select_related("document_type", "template").order_by("-created_at")
         status = self.request.GET.get("status")
         if status in dict(Document.STATUS_CHOICES):
             qs = qs.filter(status=status)
@@ -94,6 +85,7 @@ class DocumentDeleteView(LoginRequiredMixin, DeleteView):
         messages.success(self.request, "Документ удалён.")
         return super().form_valid(form)
 
+
 class TemplateListView(LoginRequiredMixin, ListView):
     model = Template
     template_name = "dashboard/templates/list.html"
@@ -101,8 +93,7 @@ class TemplateListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         return (
-            Template.objects
-            .filter(is_active=True)
+            Template.objects.filter(is_active=True)
             .filter(models.Q(kind="system") | models.Q(owner=self.request.user))
             .order_by("kind", "name")
         )
@@ -115,14 +106,19 @@ class TemplateListView(LoginRequiredMixin, ListView):
         ctx["user_templates"] = [t for t in ctx["templates"] if t.kind == "user"]
         return ctx
 
+
 class TemplateUploadView(LoginRequiredMixin, View):
     template_name = "dashboard/templates/upload.html"
 
     def get(self, request):
-        return render(request, self.template_name, {
-            "page_title": "Загрузить шаблон",
-            "page_subtitle": "Word-файл с плейсхолдерами [Кому], [Дата] и т.п.",
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "page_title": "Загрузить шаблон",
+                "page_subtitle": "Word-файл с плейсхолдерами [Кому], [Дата] и т.п.",
+            },
+        )
 
     def post(self, request):
         name = (request.POST.get("name") or "").strip()
@@ -139,7 +135,6 @@ class TemplateUploadView(LoginRequiredMixin, View):
             messages.error(request, "Поддерживаются только файлы .docx.")
             return redirect("dashboard:template_upload")
 
-        # Уникальный code на основе имени
         base = re.sub(r"[^a-z0-9]+", "_", name.lower(), flags=re.IGNORECASE).strip("_")
         code = base or f"tpl_{request.user.pk}"
         suffix = 1
@@ -158,7 +153,6 @@ class TemplateUploadView(LoginRequiredMixin, View):
         )
         template.docx_template.save(file.name, file, save=True)
 
-        # Парсим плейсхолдеры
         provider = _pick_provider()
         placeholders, error = parse_template(template.docx_template, provider)
         template.placeholders = placeholders
@@ -168,12 +162,14 @@ class TemplateUploadView(LoginRequiredMixin, View):
 
         return redirect("dashboard:template_detail", pk=template.pk)
 
+
 class TemplateDetailView(LoginRequiredMixin, View):
     template_name = "dashboard/templates/detail.html"
 
     def _get(self, request, pk):
         return get_object_or_404(
-            Template, pk=pk,
+            Template,
+            pk=pk,
         )
 
     def _can_edit(self, request, template):
@@ -183,11 +179,15 @@ class TemplateDetailView(LoginRequiredMixin, View):
         template = self._get(request, pk)
         if not (template.kind == "system" or template.owner_id == request.user.pk):
             raise Http404
-        return render(request, self.template_name, {
-            "template": template,
-            "can_edit": self._can_edit(request, template),
-            "page_title": template.name,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "template": template,
+                "can_edit": self._can_edit(request, template),
+                "page_title": template.name,
+            },
+        )
 
     def post(self, request, pk):
         template = self._get(request, pk)
@@ -202,11 +202,13 @@ class TemplateDetailView(LoginRequiredMixin, View):
                 code = request.POST.get(f"code_{i}", "").strip()
                 label = request.POST.get(f"label_{i}", "").strip()
                 if code:
-                    new.append({
-                        "placeholder": item["placeholder"],
-                        "code": code,
-                        "label": label or code,
-                    })
+                    new.append(
+                        {
+                            "placeholder": item["placeholder"],
+                            "code": code,
+                            "label": label or code,
+                        }
+                    )
             template.placeholders = new
             template.save()
             messages.success(request, "Плейсхолдеры обновлены.")
@@ -227,6 +229,7 @@ class TemplateDetailView(LoginRequiredMixin, View):
 
         return redirect("dashboard:template_detail", pk=template.pk)
 
+
 def _pick_provider():
     """Возвращает первый доступный AI-провайдер или None."""
     providers = getattr(settings, "AI_PROVIDERS", [])
@@ -234,6 +237,7 @@ def _pick_provider():
         if p.get("api_key"):
             return p
     return None
+
 
 class TemplatePreviewView(LoginRequiredMixin, View):
     """Рендерит .docx-шаблон в HTML для предпросмотра."""
@@ -257,7 +261,6 @@ class TemplatePreviewView(LoginRequiredMixin, View):
                 content_type="text/plain; charset=utf-8",
             )
 
-        # Открываем файл-шаблон и конвертируем в HTML
         template.docx_template.open("rb")
         try:
             result = mammoth.convert_to_html(template.docx_template)
@@ -274,6 +277,7 @@ class TemplatePreviewView(LoginRequiredMixin, View):
             },
         )
 
+
 class TemplatePreviewPDFView(LoginRequiredMixin, View):
     """
     PDF-предпросмотр шаблона: генерируем фейковый Document,
@@ -282,7 +286,7 @@ class TemplatePreviewPDFView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         from apps.documents.models import Document, DocumentType
-        from apps.documents.pdf_generator import generate_pdf, PDFError
+        from apps.documents.pdf_generator import PDFError, generate_pdf
 
         template = get_object_or_404(Template, pk=pk)
 
@@ -292,9 +296,7 @@ class TemplatePreviewPDFView(LoginRequiredMixin, View):
                 status=404,
                 content_type="text/plain; charset=utf-8",
             )
-
-        # Тип документа нужен только для заполнения DocumentType FK.
-        # Логика генерации не зависит от него, если placeholders заданы.
+        # Логика генерации не зависит, если placeholders заданы.
         doc_type = DocumentType.objects.filter(is_active=True).first()
         if doc_type is None:
             return HttpResponse(
@@ -303,9 +305,9 @@ class TemplatePreviewPDFView(LoginRequiredMixin, View):
                 content_type="text/plain; charset=utf-8",
             )
 
-        # Собираем заглушки из placeholders: [Адресат] = метка
+        # Собираем заглушки из placeholders
         fake_fields = {}
-        for p in (template.placeholders or []):
+        for p in template.placeholders or []:
             code = p.get("code")
             if not code:
                 continue
@@ -321,7 +323,6 @@ class TemplatePreviewPDFView(LoginRequiredMixin, View):
             missing_fields=[],
             status="ready",
         )
-        # Не сохраняем в БД — pk нужен только для имени файла
         fake_doc.pk = 0
 
         try:
@@ -334,6 +335,7 @@ class TemplatePreviewPDFView(LoginRequiredMixin, View):
             )
         except Exception as exc:
             import logging
+
             logging.getLogger(__name__).exception("Template PDF preview failed")
             return HttpResponse(
                 f"Ошибка предпросмотра: {exc}",
@@ -342,7 +344,5 @@ class TemplatePreviewPDFView(LoginRequiredMixin, View):
             )
 
         response = HttpResponse(pdf_buffer.read(), content_type="application/pdf")
-        response["Content-Disposition"] = (
-            f'inline; filename="template_{template.pk}_preview.pdf"'
-        )
+        response["Content-Disposition"] = f'inline; filename="template_{template.pk}_preview.pdf"'
         return response

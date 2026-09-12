@@ -15,7 +15,6 @@ class PDFError(Exception):
 
 
 # Тексты, которые Spire.Doc добавляет в бесплатной версии.
-# Используется для поиска и удаления водяного знака.
 SPIRE_WARNING_TEXTS = (
     "Evaluation Warning",
     "The document was created with Spire.Doc for Python",
@@ -47,7 +46,6 @@ def _strip_spire_warning(pdf_bytes: bytes) -> bytes:
             for text in SPIRE_WARNING_TEXTS:
                 rects = page.search_for(text)
                 for rect in rects:
-                    # Расширяем прямоугольник, чтобы захватить хвосты
                     expanded = fitz.Rect(
                         rect.x0 - 2,
                         rect.y0 - 2,
@@ -56,7 +54,6 @@ def _strip_spire_warning(pdf_bytes: bytes) -> bytes:
                     )
                     page.add_redact_annot(expanded, fill=(1, 1, 1))
 
-            # Применяем — удаляет текст под белыми прямоугольниками
             page.apply_redactions()
 
         output = BytesIO()
@@ -75,14 +72,11 @@ def _convert_spire(docx_path: Path, pdf_path: Path) -> None:
     try:
         from spire.doc import Document as SpireDoc
     except ImportError:
-        raise PDFError(
-            "Spire.Doc не установлен. Установите: pip install Spire.Doc"
-        )
+        raise PDFError("Spire.Doc не установлен. Установите: pip install Spire.Doc")
 
     try:
         doc = SpireDoc()
         doc.LoadFromFile(str(docx_path))
-        # Формат по расширению .pdf
         doc.SaveToFile(str(pdf_path))
         doc.Close()
     except Exception as exc:
@@ -97,14 +91,12 @@ def generate_pdf(document) -> BytesIO:
 
     Возвращает BytesIO с готовым PDF.
     """
-    # 1. Генерируем DOCX
     try:
         docx_buffer = generate_docx(document)
     except Exception as exc:
         logger.exception("Не удалось собрать DOCX")
         raise PDFError(f"Не удалось собрать DOCX: {exc}")
 
-    # 2. Конвертируем через Spire.Doc
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
         docx_path = tmp / f"document_{document.pk}.docx"
@@ -119,7 +111,6 @@ def generate_pdf(document) -> BytesIO:
 
         pdf_bytes = pdf_path.read_bytes()
 
-    # 3. Убираем водяной знак
     pdf_bytes = _strip_spire_warning(pdf_bytes)
 
     buffer = BytesIO(pdf_bytes)

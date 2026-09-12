@@ -189,14 +189,8 @@ if DB_MODE == "postgres":
             ),
         },
     }
-elif DB_MODE == "url" or (
-    DB_MODE not in ("postgres", "sqlite") and DATABASE_URL
-):
-    if (
-        DATABASE_URL
-        and "?" not in DATABASE_URL
-        and "sqlite" not in DATABASE_URL
-    ):
+elif DB_MODE == "url" or (DB_MODE not in ("postgres", "sqlite") and DATABASE_URL):
+    if DATABASE_URL and "?" not in DATABASE_URL and "sqlite" not in DATABASE_URL:
         DATABASE_URL += "?sslmode=require"
 
     DATABASES = {

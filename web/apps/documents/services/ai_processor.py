@@ -107,6 +107,7 @@ SYSTEM_PROMPT = """Ты — эксперт по официально-делов�
 
 class AIError(Exception):
     """Все провайдеры недоступны или вернули некорректный ответ."""
+
     pass
 
 
@@ -133,23 +134,15 @@ def _clean_json(raw: str) -> dict:
 
     match = re.search(r"\{.*\}", cleaned, re.DOTALL)
     candidate = match.group(0) if match else cleaned
-
-    # Строгий парсинг
     try:
         return json.loads(candidate)
     except json.JSONDecodeError:
         pass
-
-    # Мягкий парсинг — разрешает control-символы внутри строк
     try:
         return json.loads(candidate, strict=False)
     except json.JSONDecodeError:
         pass
-
-    # Последний шанс: заменяем control-символы на пробелы
-    sanitized = re.sub(
-        r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", candidate
-    )
+    sanitized = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", candidate)
     return json.loads(sanitized, strict=False)
 
 
@@ -184,9 +177,6 @@ def _filter_fields(data: dict) -> dict:
     return result
 
 
-# =====================================================================
-# OpenAI-совместимые провайдеры (Groq, Gemini, OpenRouter)
-# =====================================================================
 def _call_provider(provider: dict, source_text: str, doc_type: str) -> AIResult:
     if not provider.get("api_key"):
         raise ValueError(f"Не задан ключ для {provider['name']}")
@@ -201,10 +191,7 @@ def _call_provider(provider: dict, source_text: str, doc_type: str) -> AIResult:
         "model": provider["model"],
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": (
-                f"Тип документа: {doc_type}\n"
-                f"Черновик: {source_text}"
-            )},
+            {"role": "user", "content": (f"Тип документа: {doc_type}\nЧерновик: {source_text}")},
         ],
         "temperature": 0.1,
     }
@@ -224,9 +211,7 @@ def _call_provider(provider: dict, source_text: str, doc_type: str) -> AIResult:
     )
 
 
-# =====================================================================
 # GigaChat (Сбер) — отдельная ветка, не через OpenAI SDK
-# =====================================================================
 def _get_gigachat_token(auth_key: str) -> str:
     """Обменивает Authorization key на access_token GigaChat."""
     headers = {
@@ -246,7 +231,8 @@ def _get_gigachat_token(auth_key: str) -> str:
     if not resp.ok:
         logger.error(
             "GigaChat OAuth failed: status=%s body=%s",
-            resp.status_code, resp.text,
+            resp.status_code,
+            resp.text,
         )
         raise ValueError(f"GigaChat auth {resp.status_code}: {resp.text}")
     return resp.json()["access_token"]
@@ -265,10 +251,7 @@ def _call_gigachat(provider: dict, source_text: str, doc_type: str) -> AIResult:
         "model": model,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": (
-                f"Тип документа: {doc_type}\n"
-                f"Черновик: {source_text}"
-            )},
+            {"role": "user", "content": (f"Тип документа: {doc_type}\nЧерновик: {source_text}")},
         ],
         "temperature": 0.1,
     }
@@ -296,9 +279,7 @@ def _call_gigachat(provider: dict, source_text: str, doc_type: str) -> AIResult:
     )
 
 
-# =====================================================================
 # Основная точка входа с fallback-цепочкой
-# =====================================================================
 def process_draft(source_text: str, doc_type_name: str) -> AIResult:
     providers = getattr(settings, "AI_PROVIDERS", [])
     total_timeout = getattr(settings, "AI_TOTAL_TIMEOUT", 45)
@@ -318,7 +299,8 @@ def process_draft(source_text: str, doc_type_name: str) -> AIResult:
         try:
             logger.info(
                 "AI: пробуем %s (%s)",
-                provider["name"], provider.get("model", "?"),
+                provider["name"],
+                provider.get("model", "?"),
             )
 
             if provider["name"] == "gigachat":
@@ -328,7 +310,8 @@ def process_draft(source_text: str, doc_type_name: str) -> AIResult:
 
             logger.info(
                 "AI: успех через %s за %.1fс",
-                provider["name"], time.monotonic() - start,
+                provider["name"],
+                time.monotonic() - start,
             )
             return result
 

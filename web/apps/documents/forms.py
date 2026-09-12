@@ -1,9 +1,8 @@
 __all__ = ()
 
+from apps.documents.models import DocumentType, Template
 from django import forms
 from django.db import models
-
-from apps.documents.models import DocumentType, Template
 
 
 class Step1Form(forms.Form):
@@ -40,18 +39,12 @@ class Step2Form(forms.Form):
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["document_type"].queryset = DocumentType.objects.filter(
-            is_active=True
-        )
+        self.fields["document_type"].queryset = DocumentType.objects.filter(is_active=True)
 
         qs = Template.objects.filter(is_active=True)
         if user is not None and user.is_authenticated:
-            # Системные + свои
-            qs = qs.filter(
-                models.Q(kind="system") | models.Q(owner=user)
-            )
+            qs = qs.filter(models.Q(kind="system") | models.Q(owner=user))
         else:
-            # Только системные
             qs = qs.filter(kind="system")
 
         self.fields["template"].queryset = qs.order_by("kind", "name")

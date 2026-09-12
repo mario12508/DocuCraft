@@ -31,9 +31,7 @@ def associate_by_email(backend, details, user=None, *args, **kwargs):
         return None
 
     if user and user.pk:
-        existing_user = (
-            User.objects.filter(email=email).exclude(id=user.id).first()
-        )
+        existing_user = User.objects.filter(email=email).exclude(id=user.id).first()
         if existing_user:
             social = UserSocialAuth.objects.filter(
                 user=existing_user,
@@ -68,9 +66,7 @@ def save_avatar(backend, user, response, *args, **kwargs):
     if backend.name == "yandex-oauth2":
         avatar_id = response.get("default_avatar_id")
         if avatar_id:
-            avatar_url = (
-                f"https://avatars.yandex.net/get-yapic/{avatar_id}/islands-200"
-            )
+            avatar_url = f"https://avatars.yandex.net/get-yapic/{avatar_id}/islands-200"
 
     elif backend.name == "github":
         avatar_url = response.get("avatar_url")

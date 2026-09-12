@@ -17,7 +17,7 @@ def notify_users_about_news(sender, instance, created, **kwargs):
                     profile=user.profile,
                     title=f"{instance.title}",
                     link=f"/news/{instance.id}/",
-                    is_read=False
+                    is_read=False,
                 )
             )
 
