@@ -367,6 +367,7 @@ class Step2View(LoginRequiredMixin, FormView):
         document = Document.objects.create(
             document_type=dt,
             template=tpl,
+            owner=self.request.user,
             source_text=source_text,
             processed_text=source_text,
             extracted_fields={},
@@ -487,16 +488,18 @@ class PreviewView(LoginRequiredMixin, View):
         return redirect("documents:preview", pk=document.pk)
 
 
-# Скачивание
-
 
 class DownloadView(LoginRequiredMixin, View):
     def get(self, request, pk):
-        document = get_object_or_404(Document, pk=pk)
+        document = get_object_or_404(
+            Document, pk=pk, owner=request.user,
+        )
         return self._serve(document, request.GET.get("format", "docx"))
 
     def post(self, request, pk):
-        document = get_object_or_404(Document, pk=pk)
+        document = get_object_or_404(
+            Document, pk=pk, owner=request.user,
+        )
         document = _apply_post_changes(request, document)
         return self._serve(document, request.POST.get("format", "docx"))
 
@@ -563,17 +566,13 @@ class DocxPreviewView(LoginRequiredMixin, View):
 
 
 class DocumentPreviewPDFView(LoginRequiredMixin, View):
-    """
-    PDF-предпросмотр готового документа.
-    Генерирует тот же DOCX, что и при скачивании, и конвертирует в PDF.
-    """
-
     def get(self, request, pk):
         from apps.documents.pdf_generator import PDFError, generate_pdf
 
         document = get_object_or_404(
             Document.objects.select_related("document_type", "template"),
             pk=pk,
+            owner=request.user,
         )
 
         try:

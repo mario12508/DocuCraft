@@ -38,7 +38,12 @@ class DocumentListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        qs = Document.objects.select_related("document_type", "template").order_by("-created_at")
+        qs = (
+            Document.objects
+            .filter(owner=self.request.user)
+            .select_related("document_type", "template")
+            .order_by("-created_at")
+        )
         status = self.request.GET.get("status")
         if status in dict(Document.STATUS_CHOICES):
             qs = qs.filter(status=status)
@@ -80,6 +85,11 @@ class DocumentDeleteView(LoginRequiredMixin, DeleteView):
 
     model = Document
     success_url = reverse_lazy("dashboard:documents")
+
+    def get_queryset(self):
+        return Document.objects.filter(
+            owner=self.request.user,
+        )
 
     def form_valid(self, form):
         messages.success(self.request, "Документ удалён.")
@@ -296,7 +306,7 @@ class TemplatePreviewPDFView(LoginRequiredMixin, View):
                 status=404,
                 content_type="text/plain; charset=utf-8",
             )
-        # Логика генерации не зависит, если placeholders заданы.
+
         doc_type = DocumentType.objects.filter(is_active=True).first()
         if doc_type is None:
             return HttpResponse(
@@ -305,7 +315,6 @@ class TemplatePreviewPDFView(LoginRequiredMixin, View):
                 content_type="text/plain; charset=utf-8",
             )
 
-        # Собираем заглушки из placeholders
         fake_fields = {}
         for p in template.placeholders or []:
             code = p.get("code")

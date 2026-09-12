@@ -149,6 +149,15 @@ class Document(models.Model):
         ("error", "Ошибка"),
     ]
 
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="documents",
+        null=True, blank=True,
+        verbose_name="Владелец",
+        help_text="Пусто — документ без владельца (для миграции).",
+    )
+
     document_type = models.ForeignKey(
         DocumentType,
         on_delete=models.PROTECT,

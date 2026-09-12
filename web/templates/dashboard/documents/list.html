@@ -61,13 +61,10 @@
   {% if documents %}
 
     <div class="docs-view" data-view="table" id="docsView">
-
-      <!-- Табличный вид -->
       <div class="docs-table-wrap">
         <table class="dashboard-table dashboard-table--clickable">
           <thead>
             <tr>
-              <th>ID</th>
               <th>Тип</th>
               <th>Шаблон</th>
               <th>Статус</th>
@@ -78,7 +75,6 @@
           <tbody>
             {% for doc in documents %}
               <tr data-href="{% url 'dashboard:document_detail' doc.pk %}">
-                <td>#{{ doc.pk }}</td>
                 <td>{{ doc.document_type.name }}</td>
                 <td>{{ doc.template.name }}</td>
                 <td>
@@ -98,12 +94,11 @@
         </table>
       </div>
 
-      <!-- Карточный вид -->
       <div class="docs-cards">
         {% for doc in documents %}
           <a href="{% url 'dashboard:document_detail' doc.pk %}" class="doc-card-item">
             <div class="doc-card-head">
-              <span class="doc-card-id">#{{ doc.pk }}</span>
+              <span class="doc-card-id"></span>
               <span class="status status-{{ doc.status }}">
                 {{ doc.get_status_display }}
               </span>
