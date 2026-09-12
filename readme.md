@@ -36,6 +36,16 @@
       <em>Готовый документ в Word</em>
     </td>
   </tr>
+  <tr>
+    <td align="center">
+      <img src="images/screenshot6.png" width="500" alt="Шаг 3. Предпросмотр" /><br>
+      <em>Детализация документа</em>
+    </td>
+    <td align="center">
+      <img src="images/screenshot7.png" width="500" alt="Готовый DOCX" /><br>
+      <em>Админ панель</em>
+    </td>
+  </tr>
 </table>
 
 ---
