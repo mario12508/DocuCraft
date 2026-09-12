@@ -11,7 +11,6 @@ from docx.shared import Cm, Pt
 
 logger = logging.getLogger(__name__)
 
-
 ALIGN_MAP = {
     "left": WD_ALIGN_PARAGRAPH.LEFT,
     "center": WD_ALIGN_PARAGRAPH.CENTER,
@@ -19,66 +18,69 @@ ALIGN_MAP = {
     "justify": WD_ALIGN_PARAGRAPH.JUSTIFY,
 }
 
+BODY_CODES = {"body", "processed_text", "document_text", "text"}
+
+# Суффиксы номеров по типу документа
+NUMBER_SUFFIX = {
+    "sluzhebnaya_zapiska": "СЗ",
+    "dokladnaya_zapiska": "ДЗ",
+    "pismo": "П",
+    "informacionnaya_spravka": None,  # справке номер не нужен
+}
+
+# Жирный заголовок типа документа
+DOCUMENT_TITLE = {
+    "sluzhebnaya_zapiska": "СЛУЖЕБНАЯ ЗАПИСКА",
+    "dokladnaya_zapiska": "ДОКЛАДНАЯ ЗАПИСКА",
+    "informacionnaya_spravka": "ИНФОРМАЦИОННАЯ СПРАВКА",
+    "pismo": "ПИСЬМО",
+}
+
 
 # ---------------------------------------------------------------------------
-# Плейсхолдеры — динамически из шаблона
+# Работа с файлом-шаблоном (только для пользовательских шаблонов)
 # ---------------------------------------------------------------------------
+def _normalize_text(text):
+    """Убирает лишние переносы и пробелы."""
+    if not text:
+        return ""
+    # Тройные и более переносов → двойные
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    # Пробелы в начале и конце строк
+    text = "\n".join(line.strip() for line in text.split("\n"))
+    # Пробелы подряд (кроме отступов)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    return text.strip()
+
 
 def _collect_replacements(document):
-    """
-    Строит {placeholder: value} на основе template.placeholders.
-
-    Единственный источник правды — Template.placeholders.
-    Никаких хардкодов «[Кому] → addressee» в коде.
-    """
     extracted = document.extracted_fields or {}
     tmpl = document.template
 
     mapping = {}
-
     for p in (tmpl.placeholders or []):
         ph = p.get("placeholder")
         code = p.get("code")
         if not ph or not code:
             continue
-
-        # Текст документа — отдельный случай: берём из processed_text
-        if code in ("body", "processed_text", "document_text", "text"):
+        if code in BODY_CODES:
             mapping[ph] = document.processed_text or ""
         else:
             mapping[ph] = str(extracted.get(code) or "")
-
     return mapping
 
 
-
 def _replace_in_paragraph(paragraph, replacements):
-    """Заменяет плейсхолдеры. Работает даже с разбитыми runs."""
     if not paragraph.runs:
         return
-
-    # Склеиваем текст, нормализуем пробелы
     full_text = "".join(run.text for run in paragraph.runs)
     if not any(ph in full_text for ph in replacements):
-        # Может быть, плейсхолдер разбит спецсимволами
-        normalized = re.sub(r"[\u200b\u200c\u200d\ufeff]", "", full_text)
-        if not any(ph in normalized for ph in replacements):
-            return
-        full_text = normalized
-
+        return
     new_text = full_text
     for ph, value in replacements.items():
         if ph not in new_text:
             continue
-        if value == "":
-            stripped = new_text.strip()
-            if stripped == ph or stripped == ph.rstrip(":"):
-                new_text = ""
-                break
-            new_text = new_text.replace(ph, "")
-        else:
-            new_text = new_text.replace(ph, value).replace("[", "").replace("]", "")
-
+        new_text = new_text.replace(ph, value)
     first_run = paragraph.runs[0]
     first_run.text = new_text
     for run in paragraph.runs[1:]:
@@ -94,46 +96,20 @@ def _replace_in_table(table, replacements):
                 _replace_in_table(nested, replacements)
 
 
-def _apply_header_footer_from_rules(docx_doc, rules, document=None):
-    """Заполняет колонтитулы, если в шаблоне пусто."""
-    section = docx_doc.sections[0]
-
-    org_name = rules.get("organization")
-    if org_name and not section.header.paragraphs[0].text.strip():
-        p = section.header.paragraphs[0]
-        p.text = org_name
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        for run in p.runs:
-            run.font.size = Pt(rules.get("header_font_size", 11))
-
-    footer_template = rules.get("footer", "")
-    if footer_template and document is not None:
-        text = footer_template.format(
-            document_type=document.document_type.name,
-            date=(document.document_date.strftime("%d.%m.%Y")
-                  if document.document_date else ""),
-        )
-        p = section.footer.paragraphs[0]
-        if not p.text.strip():
-            p.text = text
-            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            for run in p.runs:
-                run.font.size = Pt(rules.get("footer_font_size", 10))
-
-
 def _render_from_file(document):
     tmpl = document.template
     if not tmpl.docx_template:
         return None
-
-    tmpl.docx_template.open("rb")
     try:
+        tmpl.docx_template.open("rb")
         docx_doc = DocxDocument(tmpl.docx_template)
     finally:
-        tmpl.docx_template.close()
+        try:
+            tmpl.docx_template.close()
+        except Exception:
+            pass
 
     replacements = _collect_replacements(document)
-
     for p in docx_doc.paragraphs:
         _replace_in_paragraph(p, replacements)
     for table in docx_doc.tables:
@@ -144,10 +120,6 @@ def _render_from_file(document):
         for p in section.footer.paragraphs:
             _replace_in_paragraph(p, replacements)
 
-    _apply_header_footer_from_rules(
-        docx_doc, document.template.rules or {}, document,
-    )
-
     buffer = BytesIO()
     docx_doc.save(buffer)
     buffer.seek(0)
@@ -155,7 +127,7 @@ def _render_from_file(document):
 
 
 # ---------------------------------------------------------------------------
-# Программная сборка (fallback, если файла-шаблона нет)
+# Программная сборка
 # ---------------------------------------------------------------------------
 
 def _apply_page_rules(docx_doc, rules):
@@ -183,8 +155,9 @@ def _style_run(run, font_name, font_size, bold=False):
 
 def _add_paragraph(docx_doc, text, rules, font_name, font_size,
                    align=None, first_line_indent=None, bold=False):
+    """Добавляет абзац. Если text пустой — ничего не делает."""
     if not text:
-        return
+        return None
     p = docx_doc.add_paragraph(text)
     for run in p.runs:
         _style_run(run, font_name, font_size, bold=bold)
@@ -192,45 +165,226 @@ def _add_paragraph(docx_doc, text, rules, font_name, font_size,
         p.alignment = ALIGN_MAP.get(align, WD_ALIGN_PARAGRAPH.JUSTIFY)
     pf = p.paragraph_format
     pf.line_spacing = rules.get("line_spacing", 1.5)
+    pf.keep_together = False
+    pf.keep_with_next = False
     if first_line_indent is not None:
         pf.first_line_indent = Cm(first_line_indent)
+    return p
+
+
+def _apply_header_footer(docx_doc, rules, document):
+    section = docx_doc.sections[0]
+
+    org_name = rules.get("organization")
+    if org_name:
+        p = section.header.paragraphs[0]
+        p.text = org_name
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for run in p.runs:
+            run.font.size = Pt(rules.get("header_font_size", 11))
+
+    footer_template = rules.get("footer", "")
+    if footer_template and document is not None:
+        text = footer_template.format(
+            document_type=document.document_type.name,
+            date=(document.document_date.strftime("%d.%m.%Y")
+                  if document.document_date else ""),
+        )
+        p = section.footer.paragraphs[0]
+        p.text = text
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for run in p.runs:
+            run.font.size = Pt(rules.get("footer_font_size", 10))
+
+
+def _get_number(document):
+    """Номер из extracted_fields или сгенерированный."""
+    extracted = document.extracted_fields or {}
+    if extracted.get("number"):
+        return extracted["number"]
+    suffix = NUMBER_SUFFIX.get(document.document_type.code)
+    if not suffix:
+        return None
+    from apps.documents.models import Document as DocModel
+    count = DocModel.objects.filter(
+        document_type=document.document_type
+    ).count()
+    return f"{count + 1:02d}-{suffix}"
+
+
+def _add_empty_paragraph(docx_doc, font_name, font_size, rules):
+    """Пустой абзац с явно нулевыми отступами."""
+    p = docx_doc.add_paragraph()
+    pf = p.paragraph_format
+    pf.line_spacing = rules.get("line_spacing", 1.5)
+    pf.space_before = Pt(0)
+    pf.space_after = Pt(0)
+    # Добавляем пустой run, чтобы стиль точно применился
+    run = p.add_run("")
+    _style_run(run, font_name, font_size)
+    return p
+
+
+def _setup_document_styles(docx_doc, font_name, font_size, line_spacing):
+    """
+    Настраивает стиль Normal для всего документа:
+    - шрифт, кегль
+    - межстрочный интервал
+    - нулевые отступы до/после абзаца
+    """
+    style = docx_doc.styles["Normal"]
+    style.font.name = font_name
+    style.font.size = Pt(font_size)
+
+    # Явно прописываем rFonts для кириллицы
+    rpr = style.element.get_or_add_rPr()
+    rfonts = rpr.find(qn("w:rFonts"))
+    if rfonts is None:
+        rfonts = rpr.makeelement(qn("w:rFonts"), {})
+        rpr.append(rfonts)
+    for attr in ("w:eastAsia", "w:cs", "w:hAnsi", "w:ascii"):
+        rfonts.set(qn(attr), font_name)
+
+    pf = style.paragraph_format
+    pf.line_spacing = line_spacing
+    pf.space_before = Pt(0)
+    pf.space_after = Pt(0)
+    pf.widow_control = False
 
 
 def _render_programmatic(document):
-    """Простая сборка, если файла-шаблона нет. Без хардкода реквизитов."""
+    """Программная сборка с ветвлением по типу документа."""
     rules = document.template.rules or {}
     font = rules.get("font", {})
     font_name = font.get("name", "Times New Roman")
     font_size = font.get("size", 14)
     extracted = document.extracted_fields or {}
+    doc_type_code = document.document_type.code
+    number = _get_number(document)
+
+    is_spravka = doc_type_code == "informacionnaya_spravka"
+    is_pismo = doc_type_code == "pismo"
 
     docx_doc = DocxDocument()
     _apply_page_rules(docx_doc, rules)
+    _setup_document_styles(
+        docx_doc, font_name, font_size,
+        rules.get("line_spacing", 1.5),
+    )
+    _apply_header_footer(docx_doc, rules, document)
 
-    # Шапка — берём значения из extracted_fields по кодам шаблона
-    placeholders = document.template.placeholders or []
+    # 1) Шапка справа — три строки: должность / организация / ФИО
+    if not is_spravka:
+        addressee_parts = [
+            extracted.get("addressee_position"),
+            extracted.get("addressee_org"),
+            extracted.get("addressee_name"),
+        ]
+        addressee_parts = [p for p in addressee_parts if p]
 
-    # Разделяем на «шапку» и «подпись» условно: первые 3 — шапка
-    # Но чтобы не гадать — выводим все реквизиты как список, потом текст.
-    for p in placeholders:
-        code = p.get("code")
-        if code in ("body", "processed_text", "document_text", "text"):
-            continue
-        value = extracted.get(code, "")
-        if not value:
-            continue
-        _add_paragraph(docx_doc, f"{p.get('label', code)}: {value}",
-                       rules, font_name, font_size,
-                       align="left", first_line_indent=0)
+        if not addressee_parts and extracted.get("addressee"):
+            # Fallback: разбиваем склеенную строку
+            addressee_parts = [
+                s.strip() for s in extracted["addressee"].split("\n")
+                if s.strip()
+            ]
 
-    docx_doc.add_paragraph()
+        for line in addressee_parts:
+            _add_paragraph(
+                docx_doc, line, rules,
+                font_name, font_size,
+                align="right", first_line_indent=0,
+            )
 
-    for block in (document.processed_text or "").split("\n\n"):
+    # 2) Дата и номер — слева
+    date = extracted.get("date", "")
+    parts = []
+    if date:
+        parts.append(f"Дата: {date}")
+    if number and not is_spravka:
+        parts.append(f"Номер: {number}")
+    if parts:
+        _add_paragraph(
+            docx_doc, "   ".join(parts), rules,
+            font_name, font_size,
+            align="left", first_line_indent=0,
+        )
+
+    # 3) Жирный тип документа по центру
+    title = DOCUMENT_TITLE.get(doc_type_code)
+    if title:
+        _add_paragraph(
+            docx_doc, title, rules,
+            font_name, font_size,
+            align="center", first_line_indent=0, bold=True,
+        )
+
+    # 4) Заголовок / тема
+    subject = extracted.get("subject", "")
+    if subject:
+        _add_paragraph(
+            docx_doc, subject, rules,
+            font_name, font_size,
+            align="center", first_line_indent=0, bold=True,
+        )
+
+    # 5) Текст
+    body = _normalize_text(document.processed_text or "")
+    for block in body.split("\n\n"):
         text = block.strip()
         if not text:
             continue
-        _add_paragraph(docx_doc, text, rules, font_name, font_size,
-                       align="justify", first_line_indent=1.25)
+        _add_paragraph(
+            docx_doc, text, rules,
+            font_name, font_size,
+            align="justify", first_line_indent=1.25,
+        )
+
+    # 6) Подпись — две строки: должность, пустая строка, ФИО
+    sender_position = extracted.get("sender_position")
+    sender_name = extracted.get("sender_name")
+
+    # Fallback: если AI вернул только склеенный sender
+    if not sender_position and not sender_name:
+        sender_raw = extracted.get("signature") or extracted.get("sender")
+        if sender_raw:
+            lines = [s.strip() for s in sender_raw.split("\n") if s.strip()]
+            if len(lines) >= 2:
+                sender_position, sender_name = lines[0], lines[-1]
+            elif lines:
+                sender_position = lines[0]
+
+    if sender_position or sender_name:
+        _add_empty_paragraph(docx_doc, font_name, font_size, rules)  # отступ перед подписью
+
+        align = "center" if is_pismo else "left"
+
+        if sender_position:
+            _add_paragraph(
+                docx_doc, sender_position, rules,
+                font_name, font_size,
+                align=align, first_line_indent=0,
+            )
+            # Пустая строка для места подписи
+            _add_empty_paragraph(docx_doc, font_name, font_size, rules)
+            # Линия подписи
+            _add_paragraph(
+                docx_doc, "___________________________", rules,
+                font_name, font_size,
+                align=align, first_line_indent=0,
+            )
+            if sender_name:
+                _add_paragraph(
+                    docx_doc, sender_name, rules,
+                    font_name, font_size,
+                    align=align, first_line_indent=0,
+                )
+        elif sender_name:
+            _add_paragraph(
+                docx_doc, sender_name, rules,
+                font_name, font_size,
+                align=align, first_line_indent=0,
+            )
 
     buffer = BytesIO()
     docx_doc.save(buffer)
@@ -240,7 +394,13 @@ def _render_programmatic(document):
 
 def generate_docx(document):
     """Возвращает BytesIO с готовым DOCX."""
-    from_file = _render_from_file(document)
-    if from_file is not None:
-        return from_file
+    tmpl = document.template
+
+    # Для пользовательских шаблонов — файл, если он есть
+    if tmpl.kind == "user" and tmpl.docx_template:
+        from_file = _render_from_file(document)
+        if from_file is not None:
+            return from_file
+
+    # Для системных — программная сборка
     return _render_programmatic(document)

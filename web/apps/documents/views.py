@@ -3,6 +3,7 @@ __all__ = ()
 from datetime import datetime
 
 import logging
+import re
 
 from apps.documents.docx_generator import generate_docx
 from apps.documents.drafts_loader import load_draft_categories
@@ -36,25 +37,119 @@ NON_AI_CODES = BODY_CODES | {"organization"}
 # Маппинг: код (для шаблона и/или для UI) → список AI-ключей,
 # значения которых нужно склеить в этот код.
 AI_FIELD_MAP = {
-    # Коды для UI / RequiredField
+    # Для формы предпросмотра (склейки)
     "addressee":       ["addressee_position", "addressee_name"],
     "sender":          ["author_position", "author_name"],
     "signature":       ["author_position", "author_name"],
     "subject":         ["topic"],
 
-    # Коды для шаблонов (Template.placeholders)
-    "sender_position": ["author_position"],
-    "sender_name":     ["author_name"],
+    # Для шаблонов — раздельные коды
+    "addressee_position": ["addressee_position"],
+    "addressee_org":      ["addressee_org"],
+    "addressee_name":     ["addressee_name"],
+    "sender_position":    ["author_position"],
+    "sender_org":         ["author_org"],
+    "sender_name":        ["author_name"],
 
-    # Общие поля
-    "date":            ["date"],
-    "number":          ["number"],
+    # Общие
+    "date":   ["date"],
+    "number": ["number"],
 }
 
 
 # ---------------------------------------------------------------------------
 # Утилиты
 # ---------------------------------------------------------------------------
+ORG_RE = re.compile(
+    r'(ООО|АО|ЗАО|ОАО|ПАО|ИП)\s+'
+    r'(?:[«"\']([^»"\']{2,60})[»"\']|([А-ЯЁ][а-яё]+(?:\s+[А-ЯЁ][а-яё]+){0,3}))'
+)
+
+NAME_RE = re.compile(r'([А-ЯЁ][а-яё]+)\s+([А-ЯЁ]\.\s*[А-ЯЁ]\.?)')
+
+
+def _extract_name_from_source(source_text, keyword=None):
+    """
+    Ищет ФИО в строке адресата.
+    Если keyword не передан — ищет по всем ключам ADDRESSEE_KEYS.
+    """
+    if not source_text:
+        return None
+
+    keys = (keyword,) if keyword else ADDRESSEE_KEYS
+
+    for line in source_text.splitlines():
+        low = line.lower()
+        if not any(k in low for k in keys):
+            continue
+        if ":" not in line:
+            continue
+
+        body = line.split(":", 1)[1]
+        m = NAME_RE.search(body)
+        if m:
+            return m.group(0).strip()
+
+    return None
+
+
+ADDRESSEE_KEYS = ("кому", "адресат", "получател")
+
+
+def _extract_org_from_source(source_text):
+    """
+    Достаёт название организации ТОЛЬКО из строки адресата.
+    Строка адресата — та, что начинается с «Кому:», «Адресат:»
+    или «Получатель:». Если такой строки нет — возвращает None.
+    """
+    if not source_text:
+        return None
+
+    for line in source_text.splitlines():
+        low = line.lower()
+        if not any(k in low for k in ADDRESSEE_KEYS):
+            continue
+        if ":" not in line:
+            continue
+
+        # правая часть строки после «Кому:»
+        body = line.split(":", 1)[1]
+        m = ORG_RE.search(body)
+        if not m:
+            continue
+
+        prefix = m.group(1)
+        name = (m.group(2) or m.group(3) or "").strip()
+        if name:
+            return f'{prefix} «{name}»'
+
+    return None
+
+
+def _split_addressee(text):
+    if not text:
+        return None, None, None
+
+    remaining = text.strip()
+    org = None
+    name = None
+
+    m = ORG_RE.search(remaining)
+    if m:
+        prefix = m.group(1)
+        body = (m.group(2) or m.group(3) or "").strip()
+        if body:
+            org = f'{prefix} «{body}»'
+            remaining = remaining.replace(m.group(0), " ").strip()
+
+    m = NAME_RE.search(remaining)
+    if m:
+        name = m.group(0).strip()
+        remaining = remaining.replace(name, " ").strip()
+
+    position = re.sub(r"\s+", " ", remaining).strip(" ,.")
+    return position or None, org, name
+
 
 def _clean_value(v):
     """Нормализует значение. Возвращает строку или None."""
@@ -90,8 +185,9 @@ def _parse_date(s):
 
 def _apply_ai_result(document, result, doc_type):
     """
-    Раскладывает AI-ответ в extracted_fields по кодам из AI_FIELD_MAP.
-    Организация берётся из template.rules, дата — из AI или текущая.
+    Раскладывает AI-ответ в extracted_fields.
+    Fallback'и (разбор склеенного адресата, орг из источника)
+    выполняются ОДИН раз после основного маппинга, а не внутри цикла.
     """
     document.processed_text = result.processed_text
     document.ai_provider = result.provider
@@ -100,7 +196,7 @@ def _apply_ai_result(document, result, doc_type):
     ai = result.extracted_fields or {}
     extracted = {}
 
-    # 1) Прогоняем через маппинг
+    # ── 1. Основной маппинг AI → extracted ───────────────────────────
     for code, ai_keys in AI_FIELD_MAP.items():
         parts = []
         for key in ai_keys:
@@ -108,24 +204,76 @@ def _apply_ai_result(document, result, doc_type):
             if val:
                 parts.append(val)
         if parts:
-            # Если ключ один — берём как есть, если несколько — склеиваем
-            extracted[code] = ", ".join(parts)
+            extracted[code] = "\n".join(parts)
 
-    # 2) Организация — из правил шаблона
+    # ── 2. Fallback: если адресат склеен в одну строку ───────────────
+    # Работает, если AI вернул только addressee_position без org/name,
+    # или всё целиком в поле addressee.
+    if not extracted.get("addressee_org") or not extracted.get("addressee_name"):
+        raw = (
+            extracted.get("addressee_position")
+            or extracted.get("addressee")
+            or ""
+        )
+        pos, org, name = _split_addressee(raw)
+        if pos and not extracted.get("addressee_position"):
+            extracted["addressee_position"] = pos
+        if org and not extracted.get("addressee_org"):
+            extracted["addressee_org"] = org
+        if name and not extracted.get("addressee_name"):
+            extracted["addressee_name"] = name
+
+        # ── 3. Fallback: организация адресата из строки «Кому:» ──────────
+        if not extracted.get("addressee_org"):
+            org = _extract_org_from_source(document.source_text)
+            if org:
+                extracted["addressee_org"] = org
+
+        # ── 4. Fallback: ФИО адресата из строки «Кому:» ──────────────────
+        if not extracted.get("addressee_name"):
+            name = _extract_name_from_source(document.source_text)
+            if name:
+                extracted["addressee_name"] = name
+
+    # ── 5. Fallback для автора (должность и ФИО) ─────────────────────
+    if not extracted.get("sender_name"):
+        raw = (
+            extracted.get("sender_position")
+            or extracted.get("sender")
+            or ""
+        )
+        pos, _, name = _split_addressee(raw)
+        if pos and not extracted.get("sender_position"):
+            extracted["sender_position"] = pos
+        if name:
+            extracted["sender_name"] = name
+
+    # ── 6. Организация-отправитель (шаблонный код organization) ──────
     org = _clean_value((document.template.rules or {}).get("organization"))
     if org:
         extracted["organization"] = org
 
-    # 3) Дата документа — из AI, иначе текущая
+    # ── 7. Дата ──────────────────────────────────────────────────────
     date_value = extracted.get("date")
     if not date_value:
         date_value = timezone.now().strftime("%d.%m.%Y")
         extracted["date"] = date_value
     document.document_date = _parse_date(date_value) or timezone.now().date()
 
+    # ── 8. Номер — автогенерация, если AI не вернул ──────────────────
+    if not extracted.get("number"):
+        suffix = {
+            "sluzhebnaya_zapiska": "СЗ",
+            "dokladnaya_zapiska": "ДЗ",
+            "pismo": "П",
+        }.get(doc_type.code)
+        if suffix:
+            count = Document.objects.filter(document_type=doc_type).count()
+            extracted["number"] = f"{count + 1:02d}-{suffix}"
+
     document.extracted_fields = extracted
 
-    # 4) Недостающие — по плейсхолдерам шаблона, без body и organization
+    # ── 9. Недостающие реквизиты ─────────────────────────────────────
     document.missing_fields = [
         p["code"] for p in (document.template.placeholders or [])
         if p.get("code")

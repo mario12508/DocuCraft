@@ -1,22 +1,63 @@
 {% extends "dashboard/base.html" %}
+{% load static %}
 
 {% block title %}Удаление документа — Панель{% endblock %}
 
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/documents/documents.css' %}">
+{% endblock %}
+
 {% block dashboard_content %}
 <div class="dashboard-home">
-  <div class="dashboard-header">
-    <h1>Удалить документ #{{ object.pk }}?</h1>
-    <p class="dashboard-subtitle">{{ object.document_type.name }}</p>
+
+  <div class="delete-card">
+
+    <div class="delete-icon">
+      <i class="bi bi-exclamation-triangle"></i>
+    </div>
+
+    <h1 class="delete-title">Удалить документ?</h1>
+    <p class="delete-subtitle">
+      Это действие нельзя отменить. Документ будет удалён навсегда,
+      вместе с историей правок и сгенерированным файлом.
+    </p>
+
+    <dl class="delete-meta">
+      <dt>Тип</dt>
+      <dd>{{ object.document_type.name }}</dd>
+
+      <dt>Шаблон</dt>
+      <dd>{{ object.template.name }}</dd>
+
+      <dt>Создан</dt>
+      <dd>{{ object.created_at|date:"d.m.Y H:i" }}</dd>
+
+      <dt>Статус</dt>
+      <dd>
+        <span class="status status-{{ object.status }}">
+          {{ object.get_status_display }}
+        </span>
+      </dd>
+    </dl>
+
+    <details class="delete-preview">
+      <summary>Показать исходный черновик</summary>
+      <pre>{{ object.source_text|truncatechars:500 }}</pre>
+    </details>
+
+    <form method="post" class="delete-actions">
+      {% csrf_token %}
+      <a href="{% url 'dashboard:document_detail' object.pk %}"
+         class="dashboard-btn">
+        <i class="bi bi-arrow-left"></i> Отмена
+      </a>
+      <button type="submit" class="dashboard-btn danger">
+        <i class="bi bi-trash"></i> Удалить навсегда
+      </button>
+    </form>
+
   </div>
 
-  <form method="post">
-    {% csrf_token %}
-    <div class="dashboard-actions">
-      <button type="submit" class="dashboard-btn danger">Удалить</button>
-      <a href="{% url 'dashboard:document_detail' object.pk %}" class="dashboard-btn">
-        Отмена
-      </a>
-    </div>
-  </form>
 </div>
 {% endblock %}

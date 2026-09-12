@@ -97,7 +97,6 @@ TEMPLATES = [
             "Шапка справа, заголовок по центру, подпись слева, "
             "верхний колонтитул с названием организации."
         ),
-        "docx_template_name": "clasic.docx",
         "rules": {
             "page": {
                 "size": "A4",
@@ -113,6 +112,25 @@ TEMPLATES = [
             "signature_align": "left",
             "organization": "ООО «Ромашка»",
         },
+        "placeholders": [
+            {"placeholder": "[Кому]", "code": "addressee_position",
+             "label": "Адресат (должность)"},
+            {"placeholder": "[Организация адресата]", "code": "addressee_org",
+             "label": "Организация адресата"},
+            {"placeholder": "[ФИО адресата]", "code": "addressee_name",
+             "label": "ФИО адресата"},
+            {"placeholder": "[Дата]", "code": "date", "label": "Дата"},
+            {"placeholder": "[Номер]", "code": "number", "label": "Номер"},
+            {"placeholder": "[Заголовок]", "code": "subject", "label": "Заголовок"},
+            {"placeholder": "[Должность автора]", "code": "sender_position",
+             "label": "Должность автора"},
+            {"placeholder": "[ФИО автора]", "code": "sender_name",
+             "label": "ФИО автора"},
+            {"placeholder": "[Организация]", "code": "organization",
+             "label": "Организация"},
+            {"placeholder": "[Текст документа]", "code": "body",
+             "label": "Текст документа"},
+        ],
     },
     {
         "code": "modern_regulatory",
@@ -123,7 +141,6 @@ TEMPLATES = [
             "Табличная шапка «Кому / От кого», подпись по центру, "
             "нижний колонтитул с типом и датой документа."
         ),
-        "docx_template_name": "modern.docx",
         "rules": {
             "page": {
                 "size": "A4",
@@ -140,6 +157,25 @@ TEMPLATES = [
             "signature_align": "center",
             "organization": "ООО «Ромашка»",
         },
+        "placeholders": [
+            {"placeholder": "[Кому]", "code": "addressee_position",
+             "label": "Адресат (должность)"},
+            {"placeholder": "[Организация адресата]", "code": "addressee_org",
+             "label": "Организация адресата"},
+            {"placeholder": "[ФИО адресата]", "code": "addressee_name",
+             "label": "ФИО адресата"},
+            {"placeholder": "[Дата]", "code": "date", "label": "Дата"},
+            {"placeholder": "[Номер]", "code": "number", "label": "Номер"},
+            {"placeholder": "[Тема]", "code": "subject", "label": "Тема"},
+            {"placeholder": "[Должность автора]", "code": "sender_position",
+             "label": "Должность автора"},
+            {"placeholder": "[ФИО автора]", "code": "sender_name",
+             "label": "ФИО автора"},
+            {"placeholder": "[Организация]", "code": "organization",
+             "label": "Организация"},
+            {"placeholder": "[Текст документа]", "code": "body",
+             "label": "Текст документа"},
+        ],
     },
 ]
 
@@ -218,61 +254,12 @@ class Command(BaseCommand):
 
         # --- Создаём/обновляем системные шаблоны ---
         for tpl in TEMPLATES:
-            file_name = tpl.get("docx_template_name")
-            defaults = {k: v for k, v in tpl.items()
-                        if k != "docx_template_name"}
-
+            defaults = {k: v for k, v in tpl.items() if
+                        k != "docx_template_name"}
             obj, created = Template.objects.update_or_create(
                 owner__isnull=True,
                 code=tpl["code"],
                 defaults=defaults,
             )
-
-            if file_name and templates_dir:
-                src = Path(templates_dir) / file_name
-                if src.exists():
-                    with open(src, "rb") as f:
-                        obj.docx_template.save(file_name, File(f), save=True)
-                    self.stdout.write(f"    привязан файл: {file_name}")
-
-                    # --- Парсинг плейсхолдеров ---
-                    if parse_template is not None:
-                        try:
-                            placeholders, error = parse_template(obj.docx_template, provider=None)
-                            obj.placeholders = placeholders
-                            obj.parse_status = "error" if error else "ready"
-                            obj.parse_error = error or ""
-                            obj.save(update_fields=[
-                                "placeholders",
-                                "parse_status",
-                                "parse_error",
-                            ])
-                            self.stdout.write(
-                                f"    найдено реквизитов: {len(placeholders)}"
-                            )
-                            if error:
-                                self.stdout.write(self.style.WARNING(
-                                    f"    парсинг: {error}"
-                                ))
-                        except Exception as exc:
-                            obj.parse_status = "error"
-                            obj.parse_error = f"Ошибка парсинга: {exc}"
-                            obj.save(update_fields=[
-                                "parse_status",
-                                "parse_error",
-                            ])
-                            self.stdout.write(self.style.ERROR(
-                                f"    ошибка парсинга: {exc}"
-                            ))
-                    else:
-                        self.stdout.write(self.style.WARNING(
-                            "    template_parser не найден — "
-                            "placeholders не заполнены"
-                        ))
-                else:
-                    self.stdout.write(self.style.WARNING(
-                        f"    файл не найден: {src}"
-                    ))
-
             mark = "+" if created else "~"
             self.stdout.write(f"  [{mark}] {tpl['name']}")
