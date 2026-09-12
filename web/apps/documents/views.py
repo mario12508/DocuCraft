@@ -1,9 +1,8 @@
 __all__ = ()
 
-from datetime import datetime
-
 import logging
 import re
+from datetime import datetime
 
 from apps.documents.docx_generator import generate_docx
 from apps.documents.drafts_loader import load_draft_categories
@@ -27,45 +26,39 @@ SESSION_TYPE = "draft_document_type_id"
 SESSION_TEMPLATE = "draft_template_id"
 
 
-# Коды основного текста — не показываем в форме, они идут в textarea
 BODY_CODES = {"body", "processed_text", "document_text", "text"}
 
-# Служебные коды — заполняются не из AI
+# Служебные коды - заполняются не из AI
 NON_AI_CODES = BODY_CODES | {"organization"}
 
 
 # Маппинг: код (для шаблона и/или для UI) → список AI-ключей,
-# значения которых нужно склеить в этот код.
 AI_FIELD_MAP = {
     # Для формы предпросмотра (склейки)
-    "addressee":       ["addressee_position", "addressee_name"],
-    "sender":          ["author_position", "author_name"],
-    "signature":       ["author_position", "author_name"],
-    "subject":         ["topic"],
-
+    "addressee": ["addressee_position", "addressee_name"],
+    "sender": ["author_position", "author_name"],
+    "signature": ["author_position", "author_name"],
+    "subject": ["topic"],
     # Для шаблонов — раздельные коды
     "addressee_position": ["addressee_position"],
-    "addressee_org":      ["addressee_org"],
-    "addressee_name":     ["addressee_name"],
-    "sender_position":    ["author_position"],
-    "sender_org":         ["author_org"],
-    "sender_name":        ["author_name"],
-
+    "addressee_org": ["addressee_org"],
+    "addressee_name": ["addressee_name"],
+    "sender_position": ["author_position"],
+    "sender_org": ["author_org"],
+    "sender_name": ["author_name"],
     # Общие
-    "date":   ["date"],
+    "date": ["date"],
     "number": ["number"],
 }
 
 
-# ---------------------------------------------------------------------------
 # Утилиты
-# ---------------------------------------------------------------------------
 ORG_RE = re.compile(
-    r'(ООО|АО|ЗАО|ОАО|ПАО|ИП)\s+'
+    r"(ООО|АО|ЗАО|ОАО|ПАО|ИП)\s+"
     r'(?:[«"\']([^»"\']{2,60})[»"\']|([А-ЯЁ][а-яё]+(?:\s+[А-ЯЁ][а-яё]+){0,3}))'
 )
 
-NAME_RE = re.compile(r'([А-ЯЁ][а-яё]+)\s+([А-ЯЁ]\.\s*[А-ЯЁ]\.?)')
+NAME_RE = re.compile(r"([А-ЯЁ][а-яё]+)\s+([А-ЯЁ]\.\s*[А-ЯЁ]\.?)")
 
 
 def _extract_name_from_source(source_text, keyword=None):
@@ -121,7 +114,7 @@ def _extract_org_from_source(source_text):
         prefix = m.group(1)
         name = (m.group(2) or m.group(3) or "").strip()
         if name:
-            return f'{prefix} «{name}»'
+            return f"{prefix} «{name}»"
 
     return None
 
@@ -139,7 +132,7 @@ def _split_addressee(text):
         prefix = m.group(1)
         body = (m.group(2) or m.group(3) or "").strip()
         if body:
-            org = f'{prefix} «{body}»'
+            org = f"{prefix} «{body}»"
             remaining = remaining.replace(m.group(0), " ").strip()
 
     m = NAME_RE.search(remaining)
@@ -179,9 +172,8 @@ def _parse_date(s):
     return None
 
 
-# ---------------------------------------------------------------------------
 # Применение результата ИИ
-# ---------------------------------------------------------------------------
+
 
 def _apply_ai_result(document, result, doc_type):
     """
@@ -196,7 +188,7 @@ def _apply_ai_result(document, result, doc_type):
     ai = result.extracted_fields or {}
     extracted = {}
 
-    # ── 1. Основной маппинг AI → extracted ───────────────────────────
+    # 1. Основной маппинг AI → extracted
     for code, ai_keys in AI_FIELD_MAP.items():
         parts = []
         for key in ai_keys:
@@ -206,15 +198,9 @@ def _apply_ai_result(document, result, doc_type):
         if parts:
             extracted[code] = "\n".join(parts)
 
-    # ── 2. Fallback: если адресат склеен в одну строку ───────────────
-    # Работает, если AI вернул только addressee_position без org/name,
-    # или всё целиком в поле addressee.
+    # 2. Fallback: если адресат склеен в одну строку
     if not extracted.get("addressee_org") or not extracted.get("addressee_name"):
-        raw = (
-            extracted.get("addressee_position")
-            or extracted.get("addressee")
-            or ""
-        )
+        raw = extracted.get("addressee_position") or extracted.get("addressee") or ""
         pos, org, name = _split_addressee(raw)
         if pos and not extracted.get("addressee_position"):
             extracted["addressee_position"] = pos
@@ -223,44 +209,40 @@ def _apply_ai_result(document, result, doc_type):
         if name and not extracted.get("addressee_name"):
             extracted["addressee_name"] = name
 
-        # ── 3. Fallback: организация адресата из строки «Кому:» ──────────
+        # 3. Fallback: организация адресата из строки «Кому:»
         if not extracted.get("addressee_org"):
             org = _extract_org_from_source(document.source_text)
             if org:
                 extracted["addressee_org"] = org
 
-        # ── 4. Fallback: ФИО адресата из строки «Кому:» ──────────────────
+        # 4. Fallback: ФИО адресата из строки «Кому:»
         if not extracted.get("addressee_name"):
             name = _extract_name_from_source(document.source_text)
             if name:
                 extracted["addressee_name"] = name
 
-    # ── 5. Fallback для автора (должность и ФИО) ─────────────────────
+    # 5. Fallback для автора (должность и ФИО)
     if not extracted.get("sender_name"):
-        raw = (
-            extracted.get("sender_position")
-            or extracted.get("sender")
-            or ""
-        )
+        raw = extracted.get("sender_position") or extracted.get("sender") or ""
         pos, _, name = _split_addressee(raw)
         if pos and not extracted.get("sender_position"):
             extracted["sender_position"] = pos
         if name:
             extracted["sender_name"] = name
 
-    # ── 6. Организация-отправитель (шаблонный код organization) ──────
+    # 6. Организация-отправитель (шаблонный код organization)
     org = _clean_value((document.template.rules or {}).get("organization"))
     if org:
         extracted["organization"] = org
 
-    # ── 7. Дата ──────────────────────────────────────────────────────
+    # 7. Дата
     date_value = extracted.get("date")
     if not date_value:
         date_value = timezone.now().strftime("%d.%m.%Y")
         extracted["date"] = date_value
     document.document_date = _parse_date(date_value) or timezone.now().date()
 
-    # ── 8. Номер — автогенерация, если AI не вернул ──────────────────
+    # 8. Номер - автогенерация, если AI не вернул
     if not extracted.get("number"):
         suffix = {
             "sluzhebnaya_zapiska": "СЗ",
@@ -273,12 +255,11 @@ def _apply_ai_result(document, result, doc_type):
 
     document.extracted_fields = extracted
 
-    # ── 9. Недостающие реквизиты ─────────────────────────────────────
+    # 9. Недостающие реквизиты
     document.missing_fields = [
-        p["code"] for p in (document.template.placeholders or [])
-        if p.get("code")
-        and p["code"] not in NON_AI_CODES
-        and not extracted.get(p["code"])
+        p["code"]
+        for p in (document.template.placeholders or [])
+        if p.get("code") and p["code"] not in NON_AI_CODES and not extracted.get(p["code"])
     ]
 
     document.status = document.recalc_status()
@@ -286,14 +267,13 @@ def _apply_ai_result(document, result, doc_type):
     document.save()
 
 
-# ---------------------------------------------------------------------------
 # Сохранение изменений из формы
-# ---------------------------------------------------------------------------
+
 
 def _apply_post_changes(request, document):
     extracted = dict(document.extracted_fields or {})
 
-    for p in (document.template.placeholders or []):
+    for p in document.template.placeholders or []:
         code = p.get("code")
         if not code:
             continue
@@ -309,10 +289,9 @@ def _apply_post_changes(request, document):
     document.extracted_fields = extracted
 
     document.missing_fields = [
-        p["code"] for p in (document.template.placeholders or [])
-        if p.get("code")
-        and p["code"] not in NON_AI_CODES
-        and not extracted.get(p["code"])
+        p["code"]
+        for p in (document.template.placeholders or [])
+        if p.get("code") and p["code"] not in NON_AI_CODES and not extracted.get(p["code"])
     ]
 
     processed = request.POST.get("processed_text")
@@ -326,9 +305,8 @@ def _apply_post_changes(request, document):
     return document
 
 
-# ---------------------------------------------------------------------------
 # Шаги 1-2
-# ---------------------------------------------------------------------------
+
 
 class Step1View(LoginRequiredMixin, FormView):
     template_name = "documents/step1.html"
@@ -387,8 +365,10 @@ class Step2View(LoginRequiredMixin, FormView):
         source_text = self.request.session.get(SESSION_DRAFT, "")
 
         document = Document.objects.create(
-            document_type=dt, template=tpl,
-            source_text=source_text, processed_text=source_text,
+            document_type=dt,
+            template=tpl,
+            source_text=source_text,
+            processed_text=source_text,
             extracted_fields={},
             missing_fields=[],
             status="processing",
@@ -404,7 +384,8 @@ class Step2View(LoginRequiredMixin, FormView):
             document.status = "error"
             document.error_message = str(exc)
             document.missing_fields = [
-                p["code"] for p in (tpl.placeholders or [])
+                p["code"]
+                for p in (tpl.placeholders or [])
                 if p.get("code") and p["code"] not in NON_AI_CODES
             ]
             document.save()
@@ -412,9 +393,8 @@ class Step2View(LoginRequiredMixin, FormView):
         return redirect("documents:preview", pk=document.pk)
 
 
-# ---------------------------------------------------------------------------
 # Шаг 3 — preview
-# ---------------------------------------------------------------------------
+
 
 class PreviewView(LoginRequiredMixin, View):
     template_name = "documents/preview.html"
@@ -429,27 +409,27 @@ class PreviewView(LoginRequiredMixin, View):
         extracted = document.extracted_fields or {}
         tmpl = document.template
 
-        required_codes = set(
-            document.document_type.required_fields.values_list("code", flat=True)
-        )
+        required_codes = set(document.document_type.required_fields.values_list("code", flat=True))
 
         fields = []
         seen = set()
-        for p in (tmpl.placeholders or []):
+        for p in tmpl.placeholders or []:
             code = p.get("code")
             if not code or code in seen:
                 continue
             if code in BODY_CODES:
                 continue
             seen.add(code)
-            fields.append({
-                "code": code,
-                "label": p.get("label") or code,
-                "placeholder": p.get("placeholder") or "",
-                "value": extracted.get(code, ""),
-                "is_missing": not extracted.get(code),
-                "is_required": code in required_codes,
-            })
+            fields.append(
+                {
+                    "code": code,
+                    "label": p.get("label") or code,
+                    "placeholder": p.get("placeholder") or "",
+                    "value": extracted.get(code, ""),
+                    "is_missing": not extracted.get(code),
+                    "is_required": code in required_codes,
+                }
+            )
         return fields
 
     def get(self, request, pk):
@@ -491,7 +471,8 @@ class PreviewView(LoginRequiredMixin, View):
         if action == "retry":
             try:
                 result = process_draft(
-                    document.source_text, document.document_type.name,
+                    document.source_text,
+                    document.document_type.name,
                 )
                 _apply_ai_result(document, result, document.document_type)
                 messages.success(request, "Документ успешно обработан.")
@@ -506,9 +487,8 @@ class PreviewView(LoginRequiredMixin, View):
         return redirect("documents:preview", pk=document.pk)
 
 
-# ---------------------------------------------------------------------------
 # Скачивание
-# ---------------------------------------------------------------------------
+
 
 class DownloadView(LoginRequiredMixin, View):
     def get(self, request, pk):
@@ -538,20 +518,18 @@ class DownloadView(LoginRequiredMixin, View):
         else:
             buffer = generate_docx(document)
             filename = f"document_{document.pk}.docx"
-            content_type = (
-                "application/vnd.openxmlformats-officedocument."
-                "wordprocessingml.document"
-            )
+            content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
         return FileResponse(
-            buffer, as_attachment=True,
-            filename=filename, content_type=content_type,
+            buffer,
+            as_attachment=True,
+            filename=filename,
+            content_type=content_type,
         )
 
 
-# ---------------------------------------------------------------------------
 # Предпросмотр DOCX — отдельная вьюха, рендерится в iframe
-# ---------------------------------------------------------------------------
+
 
 class DocxPreviewView(LoginRequiredMixin, View):
     """Рендерит DOCX в HTML для предпросмотра в браузере."""
@@ -583,6 +561,7 @@ class DocxPreviewView(LoginRequiredMixin, View):
             },
         )
 
+
 class DocumentPreviewPDFView(LoginRequiredMixin, View):
     """
     PDF-предпросмотр готового документа.
@@ -590,7 +569,7 @@ class DocumentPreviewPDFView(LoginRequiredMixin, View):
     """
 
     def get(self, request, pk):
-        from apps.documents.pdf_generator import generate_pdf, PDFError
+        from apps.documents.pdf_generator import PDFError, generate_pdf
 
         document = get_object_or_404(
             Document.objects.select_related("document_type", "template"),
@@ -607,6 +586,7 @@ class DocumentPreviewPDFView(LoginRequiredMixin, View):
             )
         except Exception as exc:
             import logging
+
             logging.getLogger(__name__).exception("Document PDF preview failed")
             return HttpResponse(
                 f"Ошибка предпросмотра: {exc}",
@@ -615,7 +595,5 @@ class DocumentPreviewPDFView(LoginRequiredMixin, View):
             )
 
         response = HttpResponse(pdf_buffer.read(), content_type="application/pdf")
-        response["Content-Disposition"] = (
-            f'inline; filename="document_{document.pk}_preview.pdf"'
-        )
+        response["Content-Disposition"] = f'inline; filename="document_{document.pk}_preview.pdf"'
         return response

@@ -34,11 +34,7 @@ class ProfileEditForm(forms.ModelForm):
 
     def clean_username(self):
         username = self.cleaned_data.get("username")
-        if (
-            User.objects.filter(username=username)
-            .exclude(pk=self.instance.pk)
-            .exists()
-        ):
+        if User.objects.filter(username=username).exclude(pk=self.instance.pk).exists():
             raise ValidationError("Пользователь с таким именем уже существует")
 
         return username
@@ -257,11 +253,7 @@ class EmailChangeForm(forms.Form):
 
     def clean_new_email(self):
         new_email = self.cleaned_data.get("new_email")
-        if (
-            User.objects.filter(email=new_email)
-            .exclude(id=self.user.id)
-            .exists()
-        ):
+        if User.objects.filter(email=new_email).exclude(id=self.user.id).exists():
             raise forms.ValidationError("Этот email уже используется")
 
         if new_email == self.user.email:

@@ -1,14 +1,12 @@
 __all__ = ()
 
-from django.urls import path
-
 from apps.dashboard import views
+from django.urls import path
 
 app_name = "dashboard"
 
 urlpatterns = [
     path("", views.Home.as_view(), name="home"),
-
     path("documents/", views.DocumentListView.as_view(), name="documents"),
     path(
         "documents/<int:pk>/",
@@ -20,7 +18,6 @@ urlpatterns = [
         views.DocumentDeleteView.as_view(),
         name="document_delete",
     ),
-
     path("templates/", views.TemplateListView.as_view(), name="templates"),
     path(
         "templates/upload/",

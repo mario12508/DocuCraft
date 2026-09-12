@@ -1,7 +1,7 @@
 __all__ = ()
 
-from django.db import models
 from django.conf import settings
+from django.db import models
 
 
 class DocumentType(models.Model):
@@ -10,7 +10,8 @@ class DocumentType(models.Model):
     code = models.SlugField("Код", unique=True)
     name = models.CharField("Название", max_length=100)
     structure_hint = models.TextField(
-        "Подсказка по структуре", blank=True,
+        "Подсказка по структуре",
+        blank=True,
         help_text="Например: «кому → от кого → суть → подпись»",
     )
     is_active = models.BooleanField("Активен", default=True)
@@ -34,13 +35,16 @@ class Template(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="document_templates",
-        null=True, blank=True,
+        null=True,
+        blank=True,
         verbose_name="Владелец",
         help_text="Пусто — системный шаблон, доступен всем.",
     )
     kind = models.CharField(
-        "Тип шаблона", max_length=20,
-        choices=Kind.choices, default=Kind.SYSTEM,
+        "Тип шаблона",
+        max_length=20,
+        choices=Kind.choices,
+        default=Kind.SYSTEM,
     )
 
     code = models.SlugField("Код", unique=True)
@@ -55,12 +59,15 @@ class Template(models.Model):
     )
 
     placeholders = models.JSONField(
-        "Плейсхолдеры", default=list, blank=True,
+        "Плейсхолдеры",
+        default=list,
+        blank=True,
         help_text="Заполняется автоматически при загрузке файла.",
     )
 
     parse_status = models.CharField(
-        "Статус парсинга", max_length=20,
+        "Статус парсинга",
+        max_length=20,
         choices=[
             ("pending", "Ожидает"),
             ("processing", "В обработке"),
@@ -98,17 +105,23 @@ class RequiredField(models.Model):
     """Обязательный реквизит для типа документа."""
 
     document_type = models.ForeignKey(
-        DocumentType, on_delete=models.CASCADE,
-        related_name="required_fields", verbose_name="Тип документа",
+        DocumentType,
+        on_delete=models.CASCADE,
+        related_name="required_fields",
+        verbose_name="Тип документа",
     )
     code = models.SlugField("Код реквизита")
     label = models.CharField("Название", max_length=100)
     placeholder = models.CharField(
-        "Плейсхолдер", max_length=100, default="[Заполнить]",
+        "Плейсхолдер",
+        max_length=100,
+        default="[Заполнить]",
     )
     order = models.PositiveIntegerField("Порядок", default=0)
     ai_source = models.JSONField(
-        "Ключи из ответа ИИ", default=list, blank=True,
+        "Ключи из ответа ИИ",
+        default=list,
+        blank=True,
         help_text=(
             "Список ключей из JSON-ответа ИИ, которые нужно склеить "
             'в этот реквизит. Например: ["addressee_position", '
@@ -137,38 +150,55 @@ class Document(models.Model):
     ]
 
     document_type = models.ForeignKey(
-        DocumentType, on_delete=models.PROTECT, verbose_name="Тип документа",
+        DocumentType,
+        on_delete=models.PROTECT,
+        verbose_name="Тип документа",
     )
     template = models.ForeignKey(
-        Template, on_delete=models.PROTECT, verbose_name="Шаблон",
+        Template,
+        on_delete=models.PROTECT,
+        verbose_name="Шаблон",
     )
     source_text = models.TextField("Исходный черновик")
     processed_text = models.TextField("Обработанный текст", blank=True)
     extracted_fields = models.JSONField(
-        "Извлечённые реквизиты", default=dict,
+        "Извлечённые реквизиты",
+        default=dict,
     )
     missing_fields = models.JSONField(
-        "Недостающие реквизиты", default=list,
+        "Недостающие реквизиты",
+        default=list,
     )
     docx_file = models.FileField(
-        "DOCX-файл", upload_to="documents/%Y/%m/%d/", blank=True,
+        "DOCX-файл",
+        upload_to="documents/%Y/%m/%d/",
+        blank=True,
     )
     status = models.CharField(
-        "Статус", max_length=20, choices=STATUS_CHOICES, default="draft",
+        "Статус",
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="draft",
     )
     error_message = models.TextField("Сообщение об ошибке", blank=True)
 
     # НОВОЕ: информация о том, какой провайдер сработал
     ai_provider = models.CharField(
-        "ИИ-провайдер", max_length=50, blank=True,
+        "ИИ-провайдер",
+        max_length=50,
+        blank=True,
     )
     ai_model = models.CharField(
-        "ИИ-модель", max_length=100, blank=True,
+        "ИИ-модель",
+        max_length=100,
+        blank=True,
     )
 
     # НОВОЕ: дата формирования документа (автозаполнение)
     document_date = models.DateField(
-        "Дата документа", null=True, blank=True,
+        "Дата документа",
+        null=True,
+        blank=True,
     )
 
     created_at = models.DateTimeField("Создан", auto_now_add=True)
@@ -187,11 +217,13 @@ class Document(models.Model):
         result = []
         for rf in self.document_type.required_fields.all():
             value = extracted.get(rf.code, "")
-            result.append({
-                "label": rf.label,
-                "value": value,
-                "is_missing": not value,
-            })
+            result.append(
+                {
+                    "label": rf.label,
+                    "value": value,
+                    "is_missing": not value,
+                }
+            )
         return result
 
     class Meta:

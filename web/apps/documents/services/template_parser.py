@@ -79,11 +79,13 @@ def _fallback_map(placeholders):
         else:
             code = f"custom_{i}"
             label = ph.strip()
-        result.append({
-            "placeholder": f"[{ph}]",
-            "code": code,
-            "label": label,
-        })
+        result.append(
+            {
+                "placeholder": f"[{ph}]",
+                "code": code,
+                "label": label,
+            }
+        )
     return result
 
 
@@ -123,9 +125,7 @@ def _match_via_openai(placeholders, provider):
     """Ветка для OpenAI-совместимых провайдеров (Groq, Gemini, OpenRouter)."""
     from openai import OpenAI
 
-    prompt = PROMPT.format(
-        placeholders=json.dumps(placeholders, ensure_ascii=False)
-    )
+    prompt = PROMPT.format(placeholders=json.dumps(placeholders, ensure_ascii=False))
 
     client = OpenAI(
         base_url=provider["base_url"],
@@ -135,8 +135,7 @@ def _match_via_openai(placeholders, provider):
     response = client.chat.completions.create(
         model=provider["model"],
         messages=[
-            {"role": "system",
-             "content": "Ты отвечаешь строго JSON-объектом с ключом items."},
+            {"role": "system", "content": "Ты отвечаешь строго JSON-объектом с ключом items."},
             {"role": "user", "content": prompt},
         ],
         temperature=0.1,
@@ -149,8 +148,10 @@ def _match_via_openai(placeholders, provider):
 def _match_via_gigachat(placeholders, provider):
     """Ветка для GigaChat — своя авторизация через access_token."""
     import uuid
+
     import requests
     import urllib3
+
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     auth_key = provider["api_key"]
@@ -172,9 +173,7 @@ def _match_via_gigachat(placeholders, provider):
     token = token_resp.json()["access_token"]
 
     # 2) Запрос на сопоставление плейсхолдеров
-    prompt = PROMPT.format(
-        placeholders=json.dumps(placeholders, ensure_ascii=False)
-    )
+    prompt = PROMPT.format(placeholders=json.dumps(placeholders, ensure_ascii=False))
     resp = requests.post(
         "https://api.giga.chat/v1/chat/completions",
         headers={
@@ -184,8 +183,7 @@ def _match_via_gigachat(placeholders, provider):
         json={
             "model": provider.get("model", "GigaChat-2"),
             "messages": [
-                {"role": "system",
-                 "content": "Ты отвечаешь строго JSON-объектом с ключом items."},
+                {"role": "system", "content": "Ты отвечаешь строго JSON-объектом с ключом items."},
                 {"role": "user", "content": prompt},
             ],
             "temperature": 0.1,
@@ -226,9 +224,7 @@ def match_placeholders_via_ai(placeholders, provider):
     if provider.get("base_url"):
         return _match_via_openai(placeholders, provider)
 
-    raise ValueError(
-        f"Провайдер {name} не поддерживается для сопоставления плейсхолдеров"
-    )
+    raise ValueError(f"Провайдер {name} не поддерживается для сопоставления плейсхолдеров")
 
 
 def parse_template(file_obj, provider=None):
