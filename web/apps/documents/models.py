@@ -111,8 +111,8 @@ class RequiredField(models.Model):
         "Ключи из ответа ИИ", default=list, blank=True,
         help_text=(
             "Список ключей из JSON-ответа ИИ, которые нужно склеить "
-            "в этот реквизит. Например: [\"addressee_position\", "
-            "\"addressee_name\"]. Если пусто — используется code."
+            'в этот реквизит. Например: ["addressee_position", '
+            '"addressee_name"]. Если пусто — используется code.'
         ),
     )
 

@@ -3,6 +3,7 @@ __all__ = ()
 import re
 
 from django.conf import settings
+from apps.documents.models import Document, DocumentType, Template
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import models
@@ -15,7 +16,6 @@ from django.views.generic import DeleteView, DetailView, ListView, TemplateView
 from apps.documents.models import Document, DocumentType, Template
 from apps.documents.services.ai_processor import pick_provider
 from apps.documents.services.template_parser import parse_template
-
 
 class Home(LoginRequiredMixin, TemplateView):
     """Главная страница рабочей панели."""

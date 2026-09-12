@@ -1,9 +1,8 @@
 __all__ = ()
 
+import requests
 from django.conf import settings
 from django.template.loader import render_to_string
-
-import requests
 
 
 def send_html_email(
@@ -46,8 +45,7 @@ def send_html_email(
 
         if response.status_code == 200:
             return True
-        else:
-            return False
+        return False
     except Exception:
         return False
 

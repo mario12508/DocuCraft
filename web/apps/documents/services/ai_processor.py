@@ -99,10 +99,10 @@ def _clean_json(raw: str) -> dict:
     if not raw:
         raise ValueError("Пустой ответ модели")
 
-    cleaned = re.sub(r'```(?:json)?\s*', '', raw, flags=re.IGNORECASE).strip()
-    cleaned = cleaned.rstrip('`').strip()
+    cleaned = re.sub(r"```(?:json)?\s*", "", raw, flags=re.IGNORECASE).strip()
+    cleaned = cleaned.rstrip("`").strip()
 
-    match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+    match = re.search(r"\{.*\}", cleaned, re.DOTALL)
     if match:
         return json.loads(match.group(0))
     return json.loads(cleaned)

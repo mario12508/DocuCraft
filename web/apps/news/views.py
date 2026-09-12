@@ -1,7 +1,6 @@
 __all__ = ()
 
 from apps.news.models import News
-
 from django.views.generic import DetailView, ListView
 
 

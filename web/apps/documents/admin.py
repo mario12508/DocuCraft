@@ -1,16 +1,14 @@
 __all__ = ()
 
+from apps.documents.models import Document, DocumentType, RequiredField, Template
 from django.contrib import admin
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.contrib.filters.admin import (
-    BooleanRadioFilter,
     ChoicesDropdownFilter,
     RangeDateFilter,
 )
 from unfold.decorators import display
-
-from apps.documents.models import Document, DocumentType, RequiredField, Template
 
 
 class RequiredFieldInline(TabularInline):

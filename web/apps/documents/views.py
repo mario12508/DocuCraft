@@ -2,6 +2,13 @@ __all__ = ()
 
 from datetime import datetime
 
+import logging
+
+from apps.documents.docx_generator import generate_docx
+from apps.documents.forms import Step1Form, Step2Form
+from apps.documents.models import Document, DocumentType, Template
+from apps.documents.pdf_generator import generate_pdf
+from apps.documents.services.ai_processor import AIError, process_draft
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import FileResponse, HttpResponse
@@ -11,12 +18,7 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import FormView
 
-from apps.documents.docx_generator import generate_docx
-from apps.documents.forms import Step1Form, Step2Form
-from apps.documents.models import Document, DocumentType, Template
-from apps.documents.pdf_generator import generate_pdf
-from apps.documents.services.ai_processor import AIError, process_draft
-
+logger = logging.getLogger(__name__)
 
 SESSION_DRAFT = "draft_source_text"
 SESSION_TYPE = "draft_document_type_id"

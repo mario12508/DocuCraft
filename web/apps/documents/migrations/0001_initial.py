@@ -17,6 +17,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="DocumentType",
             fields=[
+<<<<<<< HEAD
                 (
                     "id",
                     models.BigAutoField(
@@ -49,6 +50,14 @@ class Migration(migrations.Migration):
                         default=0, verbose_name="Порядок"
                     ),
                 ),
+=======
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("code", models.SlugField(unique=True, verbose_name="Код")),
+                ("name", models.CharField(max_length=100, verbose_name="Название")),
+                ("structure_hint", models.TextField(blank=True, help_text="Например: «кому → от кого → суть → подпись»", verbose_name="Подсказка по структуре")),
+                ("is_active", models.BooleanField(default=True, verbose_name="Активен")),
+                ("order", models.PositiveIntegerField(default=0, verbose_name="Порядок")),
+>>>>>>> b460f621d9d16ff7bb8d59ef495225a8812c8be7
             ],
             options={
                 "verbose_name": "Тип документа",
@@ -59,6 +68,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="Template",
             fields=[
+<<<<<<< HEAD
                 (
                     "id",
                     models.BigAutoField(
@@ -160,16 +170,29 @@ class Migration(migrations.Migration):
                         verbose_name="Владелец",
                     ),
                 ),
+=======
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("code", models.SlugField(unique=True, verbose_name="Код")),
+                ("name", models.CharField(max_length=100, verbose_name="Название")),
+                ("description", models.TextField(blank=True, verbose_name="Описание")),
+                ("rules", models.JSONField(default=dict, help_text='Например: {"page": {"margins": {"top": 2, "bottom": 2, "left": 3, "right": 1.5}}, "font": {"name": "Times New Roman", "size": 14}, "line_spacing": 1.5}', verbose_name="Правила оформления")),
+                ("is_active", models.BooleanField(default=True, verbose_name="Активен")),
+>>>>>>> b460f621d9d16ff7bb8d59ef495225a8812c8be7
             ],
             options={
                 "verbose_name": "Шаблон",
                 "verbose_name_plural": "Шаблоны",
+<<<<<<< HEAD
                 "ordering": ["kind", "name"],
+=======
+                "ordering": ["name"],
+>>>>>>> b460f621d9d16ff7bb8d59ef495225a8812c8be7
             },
         ),
         migrations.CreateModel(
             name="Document",
             fields=[
+<<<<<<< HEAD
                 (
                     "id",
                     models.BigAutoField(
@@ -275,6 +298,23 @@ class Migration(migrations.Migration):
                         verbose_name="Шаблон",
                     ),
                 ),
+=======
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("source_text", models.TextField(verbose_name="Исходный черновик")),
+                ("processed_text", models.TextField(blank=True, verbose_name="Обработанный текст")),
+                ("extracted_fields", models.JSONField(default=dict, verbose_name="Извлечённые реквизиты")),
+                ("missing_fields", models.JSONField(default=list, verbose_name="Недостающие реквизиты")),
+                ("docx_file", models.FileField(blank=True, upload_to="documents/%Y/%m/%d/", verbose_name="DOCX-файл")),
+                ("status", models.CharField(choices=[("draft", "Черновик"), ("processing", "Обработка"), ("ready", "Готов"), ("error", "Ошибка")], default="draft", max_length=20, verbose_name="Статус")),
+                ("error_message", models.TextField(blank=True, verbose_name="Сообщение об ошибке")),
+                ("ai_provider", models.CharField(blank=True, max_length=50, verbose_name="ИИ-провайдер")),
+                ("ai_model", models.CharField(blank=True, max_length=100, verbose_name="ИИ-модель")),
+                ("document_date", models.DateField(blank=True, null=True, verbose_name="Дата документа")),
+                ("created_at", models.DateTimeField(auto_now_add=True, verbose_name="Создан")),
+                ("updated_at", models.DateTimeField(auto_now=True, verbose_name="Обновлён")),
+                ("document_type", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to="documents.documenttype", verbose_name="Тип документа")),
+                ("template", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to="documents.template", verbose_name="Шаблон")),
+>>>>>>> b460f621d9d16ff7bb8d59ef495225a8812c8be7
             ],
             options={
                 "verbose_name": "Документ",
@@ -285,6 +325,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="RequiredField",
             fields=[
+<<<<<<< HEAD
                 (
                     "id",
                     models.BigAutoField(
@@ -331,6 +372,15 @@ class Migration(migrations.Migration):
                         verbose_name="Тип документа",
                     ),
                 ),
+=======
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("code", models.SlugField(verbose_name="Код реквизита")),
+                ("label", models.CharField(max_length=100, verbose_name="Название")),
+                ("placeholder", models.CharField(default="[Заполнить]", max_length=100, verbose_name="Плейсхолдер")),
+                ("order", models.PositiveIntegerField(default=0, verbose_name="Порядок")),
+                ("ai_source", models.JSONField(blank=True, default=list, help_text='Список ключей из JSON-ответа ИИ, которые нужно склеить в этот реквизит. Например: ["addressee_position", "addressee_name"]. Если пусто — используется code.', verbose_name="Ключи из ответа ИИ")),
+                ("document_type", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="required_fields", to="documents.documenttype", verbose_name="Тип документа")),
+>>>>>>> b460f621d9d16ff7bb8d59ef495225a8812c8be7
             ],
             options={
                 "verbose_name": "Обязательный реквизит",

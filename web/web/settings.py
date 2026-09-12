@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 
 import dj_database_url
-
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -345,5 +344,8 @@ AI_TOTAL_TIMEOUT = 45
 SOFFICE_PATH = None
 
 DOCX_TEMPLATES_DIR = BASE_DIR / "static_dev" / "templates"
+<<<<<<< HEAD
 
 X_FRAME_OPTIONS = "SAMEORIGIN"
+=======
+>>>>>>> b460f621d9d16ff7bb8d59ef495225a8812c8be7
