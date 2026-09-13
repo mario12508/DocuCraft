@@ -145,10 +145,12 @@ class TemplateUploadView(LoginRequiredMixin, View):
             messages.error(request, "Поддерживаются только файлы .docx.")
             return redirect("dashboard:template_upload")
 
-        base = re.sub(r"[^a-z0-9]+", "_", name.lower(), flags=re.IGNORECASE).strip("_")
-        code = base or f"tpl_{request.user.pk}"
+        base = re.sub(r"[^a-z0-9]+", "_", name.lower(),
+                      flags=re.IGNORECASE).strip("_")
+        base = base or f"tpl_{request.user.pk}"
+        code = base
         suffix = 1
-        while Template.objects.filter(owner=request.user, code=code).exists():
+        while Template.objects.filter(code=code).exists():
             suffix += 1
             code = f"{base}_{suffix}"
 
