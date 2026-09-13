@@ -355,7 +355,7 @@ def _render_programmatic(document):
     if sender_position or sender_name:
         _add_empty_paragraph(docx_doc, font_name, font_size, rules)
 
-        align = "center" if is_pismo else "left"
+        align = rules.get("signature_align", "left")
 
         if sender_position:
             _add_paragraph(
