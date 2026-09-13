@@ -165,7 +165,6 @@ class Command(BaseCommand):
         self._seed_document_types()
         self._seed_system_templates()
 
-    # Типы документов
     def _seed_document_types(self):
         self.stdout.write("Типы документов:")
         for dt in DOCUMENT_TYPES:
@@ -191,7 +190,6 @@ class Command(BaseCommand):
             mark = "+" if created else "~"
             self.stdout.write(f"  [{mark}] {doc_type.name}")
 
-    # Системные шаблоны
     def _seed_system_templates(self):
         try:
             from apps.documents.services.template_parser import parse_template
@@ -223,7 +221,6 @@ class Command(BaseCommand):
                     )
                 )
 
-        # Создаём/обновляем системные шаблоны
         for tpl in TEMPLATES:
             defaults = {k: v for k, v in tpl.items() if k != "docx_template_name"}
             obj, created = Template.objects.update_or_create(

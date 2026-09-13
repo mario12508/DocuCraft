@@ -11,7 +11,6 @@
 {% block dashboard_content %}
 <div class="dashboard-home">
 
-  <!-- ── Заголовок и действия ── -->
   <div class="docs-top">
     <div class="docs-top-text">
       <h1>{{ page_title }}</h1>
@@ -38,7 +37,6 @@
     </div>
   </div>
 
-  <!-- ── Фильтры ── -->
   <form method="get" class="docs-filters">
     <label>
       <span>Статус:</span>
@@ -78,7 +76,6 @@
 
     <div class="docs-view" data-view="table" id="docsView">
 
-      <!-- ── Табличный вид ── -->
       <div class="docs-table-wrap">
         <table class="dashboard-table dashboard-table--clickable">
           <thead>
@@ -116,7 +113,6 @@
         </table>
       </div>
 
-      <!-- ── Карточный вид ── -->
       <div class="docs-cards">
         {% for doc in documents %}
           <div class="doc-card-item">
@@ -149,7 +145,6 @@
 
     </div>
 
-    <!-- ── Пагинация ── -->
     {% if is_paginated %}
       <div class="docs-pagination">
         {% if page_obj.has_previous %}

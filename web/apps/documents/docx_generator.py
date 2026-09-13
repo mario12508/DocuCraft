@@ -20,15 +20,13 @@ ALIGN_MAP = {
 
 BODY_CODES = {"body", "processed_text", "document_text", "text"}
 
-# Суффиксы номеров по типу документа
 NUMBER_SUFFIX = {
     "sluzhebnaya_zapiska": "СЗ",
     "dokladnaya_zapiska": "ДЗ",
     "pismo": "П",
-    "informacionnaya_spravka": None,  # справке номер не нужен
+    "informacionnaya_spravka": None,
 }
 
-# Жирный заголовок типа документа
 DOCUMENT_TITLE = {
     "sluzhebnaya_zapiska": "СЛУЖЕБНАЯ ЗАПИСКА",
     "dokladnaya_zapiska": "ДОКЛАДНАЯ ЗАПИСКА",
@@ -37,7 +35,6 @@ DOCUMENT_TITLE = {
 }
 
 
-# Работа с файлом-шаблоном
 def _normalize_text(text):
     """Убирает лишние переносы и пробелы."""
     if not text:
@@ -121,7 +118,6 @@ def _render_from_file(document):
     return buffer
 
 
-# Программная сборка
 
 
 def _apply_page_rules(docx_doc, rules):
@@ -212,7 +208,6 @@ def _add_empty_paragraph(docx_doc, font_name, font_size, rules):
     pf.line_spacing = rules.get("line_spacing", 1.5)
     pf.space_before = Pt(0)
     pf.space_after = Pt(0)
-    # Добавляем пустой run, чтобы стиль точно применился
     run = p.add_run("")
     _style_run(run, font_name, font_size)
     return p
@@ -348,7 +343,6 @@ def _render_programmatic(document):
     sender_position = extracted.get("sender_position")
     sender_name = extracted.get("sender_name")
 
-    # Fallback: если AI вернул только склеенный sender
     if not sender_position and not sender_name:
         sender_raw = extracted.get("signature") or extracted.get("sender")
         if sender_raw:
@@ -359,7 +353,7 @@ def _render_programmatic(document):
                 sender_position = lines[0]
 
     if sender_position or sender_name:
-        _add_empty_paragraph(docx_doc, font_name, font_size, rules)  # отступ перед подписью
+        _add_empty_paragraph(docx_doc, font_name, font_size, rules)
 
         align = "center" if is_pismo else "left"
 
@@ -414,11 +408,9 @@ def generate_docx(document):
     """Возвращает BytesIO с готовым DOCX."""
     tmpl = document.template
 
-    # Для пользовательских шаблонов - файл
     if tmpl.kind == "user" and tmpl.docx_template:
         from_file = _render_from_file(document)
         if from_file is not None:
             return from_file
 
-    # Для системных - сборка
     return _render_programmatic(document)

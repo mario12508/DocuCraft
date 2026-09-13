@@ -191,7 +191,6 @@ class Document(models.Model):
     )
     error_message = models.TextField("Сообщение об ошибке", blank=True)
 
-    # НОВОЕ: информация о том, какой провайдер сработал
     ai_provider = models.CharField(
         "ИИ-провайдер",
         max_length=50,
@@ -203,7 +202,6 @@ class Document(models.Model):
         blank=True,
     )
 
-    # НОВОЕ: дата формирования документа (автозаполнение)
     document_date = models.DateField(
         "Дата документа",
         null=True,
@@ -213,8 +211,13 @@ class Document(models.Model):
     created_at = models.DateTimeField("Создан", auto_now_add=True)
     updated_at = models.DateTimeField("Обновлён", auto_now=True)
 
-    def recalc_status(self):
-        if self.status == "error":
+    def recalc_status(self, force=False):
+        """
+        Пересчитывает статус.
+        force=True — игнорирует текущее состояние (используется
+        после успешной ИИ-обработки, чтобы снять статус error).
+        """
+        if not force and self.status == "error":
             return "error"
         if self.missing_fields:
             return "draft"

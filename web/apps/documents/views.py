@@ -28,31 +28,25 @@ SESSION_TEMPLATE = "draft_template_id"
 
 BODY_CODES = {"body", "processed_text", "document_text", "text"}
 
-# Служебные коды - заполняются не из AI
 NON_AI_CODES = BODY_CODES | {"organization"}
 
 
-# Маппинг: код (для шаблона и/или для UI) → список AI-ключей,
 AI_FIELD_MAP = {
-    # Для формы предпросмотра (склейки)
     "addressee": ["addressee_position", "addressee_name"],
     "sender": ["author_position", "author_name"],
     "signature": ["author_position", "author_name"],
     "subject": ["topic"],
-    # Для шаблонов — раздельные коды
     "addressee_position": ["addressee_position"],
     "addressee_org": ["addressee_org"],
     "addressee_name": ["addressee_name"],
     "sender_position": ["author_position"],
     "sender_org": ["author_org"],
     "sender_name": ["author_name"],
-    # Общие
     "date": ["date"],
     "number": ["number"],
 }
 
 
-# Утилиты
 ORG_RE = re.compile(
     r"(ООО|АО|ЗАО|ОАО|ПАО|ИП)\s+"
     r'(?:[«"\']([^»"\']{2,60})[»"\']|([А-ЯЁ][а-яё]+(?:\s+[А-ЯЁ][а-яё]+){0,3}))'
@@ -105,7 +99,6 @@ def _extract_org_from_source(source_text):
         if ":" not in line:
             continue
 
-        # правая часть строки после «Кому:»
         body = line.split(":", 1)[1]
         m = ORG_RE.search(body)
         if not m:
@@ -172,9 +165,6 @@ def _parse_date(s):
     return None
 
 
-# Применение результата ИИ
-
-
 def _apply_ai_result(document, result, doc_type):
     """
     Раскладывает AI-ответ в extracted_fields.
@@ -188,7 +178,6 @@ def _apply_ai_result(document, result, doc_type):
     ai = result.extracted_fields or {}
     extracted = {}
 
-    # 1. Основной маппинг AI → extracted
     for code, ai_keys in AI_FIELD_MAP.items():
         parts = []
         for key in ai_keys:
@@ -198,7 +187,6 @@ def _apply_ai_result(document, result, doc_type):
         if parts:
             extracted[code] = "\n".join(parts)
 
-    # 2. Fallback: если адресат склеен в одну строку
     if not extracted.get("addressee_org") or not extracted.get("addressee_name"):
         raw = extracted.get("addressee_position") or extracted.get("addressee") or ""
         pos, org, name = _split_addressee(raw)
@@ -209,19 +197,16 @@ def _apply_ai_result(document, result, doc_type):
         if name and not extracted.get("addressee_name"):
             extracted["addressee_name"] = name
 
-        # 3. Fallback: организация адресата из строки «Кому:»
         if not extracted.get("addressee_org"):
             org = _extract_org_from_source(document.source_text)
             if org:
                 extracted["addressee_org"] = org
 
-        # 4. Fallback: ФИО адресата из строки «Кому:»
         if not extracted.get("addressee_name"):
             name = _extract_name_from_source(document.source_text)
             if name:
                 extracted["addressee_name"] = name
 
-    # 5. Fallback для автора (должность и ФИО)
     if not extracted.get("sender_name"):
         raw = extracted.get("sender_position") or extracted.get("sender") or ""
         pos, _, name = _split_addressee(raw)
@@ -230,19 +215,16 @@ def _apply_ai_result(document, result, doc_type):
         if name:
             extracted["sender_name"] = name
 
-    # 6. Организация-отправитель (шаблонный код organization)
     org = _clean_value((document.template.rules or {}).get("organization"))
     if org:
         extracted["organization"] = org
 
-    # 7. Дата
     date_value = extracted.get("date")
     if not date_value:
         date_value = timezone.now().strftime("%d.%m.%Y")
         extracted["date"] = date_value
     document.document_date = _parse_date(date_value) or timezone.now().date()
 
-    # 8. Номер - автогенерация, если AI не вернул
     if not extracted.get("number"):
         suffix = {
             "sluzhebnaya_zapiska": "СЗ",
@@ -255,19 +237,15 @@ def _apply_ai_result(document, result, doc_type):
 
     document.extracted_fields = extracted
 
-    # 9. Недостающие реквизиты
     document.missing_fields = [
         p["code"]
         for p in (document.template.placeholders or [])
         if p.get("code") and p["code"] not in NON_AI_CODES and not extracted.get(p["code"])
     ]
 
-    document.status = document.recalc_status()
+    document.status = document.recalc_status(force=True)
     document.error_message = ""
     document.save()
-
-
-# Сохранение изменений из формы
 
 
 def _apply_post_changes(request, document):
@@ -303,9 +281,6 @@ def _apply_post_changes(request, document):
 
     document.save()
     return document
-
-
-# Шаги 1-2
 
 
 class Step1View(LoginRequiredMixin, FormView):
@@ -394,9 +369,6 @@ class Step2View(LoginRequiredMixin, FormView):
         return redirect("documents:preview", pk=document.pk)
 
 
-# Шаг 3 — preview
-
-
 class PreviewView(LoginRequiredMixin, View):
     template_name = "documents/preview.html"
 
@@ -460,15 +432,6 @@ class PreviewView(LoginRequiredMixin, View):
             messages.info(request, "Документ переведён в черновик.")
             return redirect("documents:preview", pk=document.pk)
 
-        _apply_post_changes(request, document)
-
-        if action == "download":
-            return redirect("documents:download", pk=document.pk)
-
-        if request.POST.get("format") == "pdf":
-            url = reverse("documents:download", args=[document.pk])
-            return redirect(f"{url}?format=pdf")
-
         if action == "retry":
             try:
                 result = process_draft(
@@ -484,9 +447,17 @@ class PreviewView(LoginRequiredMixin, View):
                 messages.error(request, f"ИИ недоступен: {exc}")
             return redirect("documents:preview", pk=document.pk)
 
+        _apply_post_changes(request, document)
+
+        if action == "download":
+            return redirect("documents:download", pk=document.pk)
+
+        if request.POST.get("format") == "pdf":
+            url = reverse("documents:download", args=[document.pk])
+            return redirect(f"{url}?format=pdf")
+
         messages.success(request, "Изменения сохранены.")
         return redirect("documents:preview", pk=document.pk)
-
 
 
 class DownloadView(LoginRequiredMixin, View):
@@ -529,9 +500,6 @@ class DownloadView(LoginRequiredMixin, View):
             filename=filename,
             content_type=content_type,
         )
-
-
-# Предпросмотр DOCX — отдельная вьюха, рендерится в iframe
 
 
 class DocxPreviewView(LoginRequiredMixin, View):

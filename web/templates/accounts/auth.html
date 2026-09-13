@@ -19,7 +19,6 @@
 <body>
 
 <div class="auth-page">
-  <!-- Верхний бар -->
   <header class="auth-topbar">
     <a href="/" class="auth-home">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
@@ -34,13 +33,10 @@
 
   {% include "includes/messages.html" %}
 
-  <!-- Главный контейнер -->
   <div class="auth-container {% if active_tab == 'register' %}is-register{% endif %}" id="authContainer">
 
-    <!-- Панели с формами (под шторкой) -->
     <div class="auth-forms-wrapper">
 
-      <!-- Вход (Левая часть) -->
       <div class="auth-form-panel login-panel">
         <div class="auth-form-content">
           <div class="auth-header">
@@ -103,7 +99,6 @@
         </div>
       </div>
 
-      <!-- Регистрация (Правая часть) -->
       <div class="auth-form-panel register-panel">
         <div class="auth-form-content">
           <div class="auth-header">
@@ -166,13 +161,11 @@
 
     </div>
 
-    <!-- Подвижная Шторка (Curtain Overlay) -->
     <div class="auth-curtain-container">
       <div class="auth-curtain">
         <div class="auth-curtain-decor-1"></div>
         <div class="auth-curtain-decor-2"></div>
 
-        <!-- Содержимое шторки для окна входа -->
         <div class="auth-curtain-panel curtain-login">
           <div class="curtain-line"></div>
           <span class="curtain-badge">Новый пользователь?</span>
@@ -181,7 +174,6 @@
           <button class="curtain-btn" onclick="toggleAuthMode()">Зарегистрироваться</button>
         </div>
 
-        <!-- Содержимое шторки для окна регистрации -->
         <div class="auth-curtain-panel curtain-register">
           <div class="curtain-line"></div>
           <span class="curtain-badge">Авторизация</span>

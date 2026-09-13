@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-# ── GigaChat ─────────────────────────────────────────────────────────
 GIGACHAT_AUTH_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
 GIGACHAT_API_URL = "https://api.giga.chat/v1/chat/completions"
 GIGACHAT_SCOPE = "GIGACHAT_API_PERS"
@@ -211,7 +210,6 @@ def _call_provider(provider: dict, source_text: str, doc_type: str) -> AIResult:
     )
 
 
-# GigaChat (Сбер) — отдельная ветка, не через OpenAI SDK
 def _get_gigachat_token(auth_key: str) -> str:
     """Обменивает Authorization key на access_token GigaChat."""
     headers = {
@@ -279,7 +277,6 @@ def _call_gigachat(provider: dict, source_text: str, doc_type: str) -> AIResult:
     )
 
 
-# Основная точка входа с fallback-цепочкой
 def process_draft(source_text: str, doc_type_name: str) -> AIResult:
     providers = getattr(settings, "AI_PROVIDERS", [])
     total_timeout = getattr(settings, "AI_TOTAL_TIMEOUT", 45)

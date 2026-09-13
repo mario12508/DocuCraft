@@ -152,7 +152,6 @@ class TemplateUploadView(LoginRequiredMixin, View):
             suffix += 1
             code = f"{base}_{suffix}"
 
-        # Создаём запись, чтобы получить pk для upload_to
         template = Template.objects.create(
             owner=request.user,
             kind="user",

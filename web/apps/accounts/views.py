@@ -143,7 +143,7 @@ class VerifyEmailView(View):
 
             if profile.email_verification_token_created:
                 time_diff = timezone.now() - profile.email_verification_token_created
-                if time_diff.total_seconds() > 86400:  # 24 часа
+                if time_diff.total_seconds() > 86400:
                     messages.error(
                         request,
                         "Ссылка для подтверждения истекла. Зарегистрируйтесь заново.",

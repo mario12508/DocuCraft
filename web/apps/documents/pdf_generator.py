@@ -14,7 +14,6 @@ class PDFError(Exception):
     """Ошибка конвертации DOCX в PDF."""
 
 
-# Тексты, которые Spire.Doc добавляет в бесплатной версии.
 SPIRE_WARNING_TEXTS = (
     "Evaluation Warning",
     "The document was created with Spire.Doc for Python",
@@ -31,7 +30,7 @@ def _strip_spire_warning(pdf_bytes: bytes) -> bytes:
     или что-то упало — возвращает PDF как есть.
     """
     try:
-        import fitz  # PyMuPDF
+        import fitz
     except ImportError:
         logger.warning(
             "PyMuPDF не установлен — водяной знак Spire.Doc останется. "

@@ -28,7 +28,6 @@ class TestCleanJson:
         assert _clean_json(raw)["topic"] == "О тесте"
 
     def test_control_chars_inside_string(self):
-        # GigaChat иногда присылает реальные \n внутри строк вместо \n
         raw = '{"body": "первая строка\nвторая строка"}'
         assert "первая строка" in _clean_json(raw)["body"]
 

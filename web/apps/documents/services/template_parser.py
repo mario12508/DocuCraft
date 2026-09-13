@@ -156,7 +156,6 @@ def _match_via_gigachat(placeholders, provider):
 
     auth_key = provider["api_key"]
 
-    # 1) Обмен Authorization key → access_token
     token_resp = requests.post(
         "https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
         headers={
@@ -172,7 +171,6 @@ def _match_via_gigachat(placeholders, provider):
     token_resp.raise_for_status()
     token = token_resp.json()["access_token"]
 
-    # 2) Запрос на сопоставление плейсхолдеров
     prompt = PROMPT.format(placeholders=json.dumps(placeholders, ensure_ascii=False))
     resp = requests.post(
         "https://api.giga.chat/v1/chat/completions",
